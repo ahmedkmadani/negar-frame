@@ -25,5 +25,5 @@ RUN mkdir -p static/frames
 # Expose the port the app runs on
 EXPOSE 5003
 
-# Command to run the application
-CMD ["python", "main.py"] 
+# Command to run the application with Gunicorn
+CMD ["gunicorn", "--bind", "0.0.0.0:5003", "--workers", "4", "main:app"] 
