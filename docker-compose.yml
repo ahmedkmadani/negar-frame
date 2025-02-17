@@ -5,7 +5,7 @@ services:
     ports:
       - "5003:5003"  # Host:Container
     environment:
-      - MINIO_ENDPOINT=minio:9000
+      - MINIO_ENDPOINT=minio:9090
       - MINIO_ACCESS_KEY=minioadmin
       - MINIO_SECRET_KEY=minioadmin
       - REDIS_HOST=34.55.93.180
@@ -22,18 +22,18 @@ services:
   minio:
     image: minio/minio
     ports:
-      - "9000:9000"  # API port
-      - "9001:9001"  # Console port
+      - "9090:9090"  # Changed from 9000 to 9090
+      - "9091:9091"  # Changed from 9001 to 9091
     environment:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
     volumes:
       - minio_data:/data
-    command: server /data --console-address ":9001"
+    command: server /data --address ":9090" --console-address ":9091"  # Updated ports in command
     networks:
       - app-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      test: ["CMD", "curl", "-f", "http://localhost:9090/minio/health/live"]  # Updated health check port
       interval: 30s
       timeout: 20s
       retries: 3
