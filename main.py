@@ -59,13 +59,26 @@ def listen_to_channel():
             except Exception as e:
                 print(f"Error processing message: {e}")
 
+def get_latest_file_from_directory():
+    directory = 'static/frames'
+    try:
+        files = [os.path.join(directory, f) for f in os.listdir(directory) if f.endswith('.png')]
+        if not files:
+            return None
+        latest_file = max(files, key=os.path.getmtime)
+        return os.path.basename(latest_file)
+    except Exception as e:
+        print(f"Error getting latest file: {e}")
+        return None
+
 @app.route('/')
 def index():
     return render_template('index.html')
 
 @app.route('/get_latest_image')
 def get_latest_image():
-    return {'image': latest_image} if latest_image else {'image': None}
+    latest = get_latest_file_from_directory()
+    return {'image': latest} if latest else {'image': None}
 
 if __name__ == '__main__':
     # Start the Redis listener in a separate thread
