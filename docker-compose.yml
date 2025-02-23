@@ -22,14 +22,14 @@ services:
   minio:
     image: minio/minio
     ports:
-      - "9090:9090"  # Changed from 9000 to 9090
-      - "9091:9091"  # Changed from 9001 to 9091
+      - "9090:9090"  # API port
+      - "9095:9095"  # Changed console port from 9091 to 9095
     environment:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
     volumes:
       - minio_data:/data
-    command: server /data --address ":9090" --console-address ":9091"  # Updated ports in command
+    command: server /data --address ":9090" --console-address ":9095"  # Updated console port in command
     networks:
       - app-network
     healthcheck:
