@@ -28,7 +28,7 @@ services:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
       MINIO_BROWSER_REDIRECT_URL: https://frame.leamech.com/minio
-      MINIO_SERVER_URL: https://frame.leamech.com
+      MINIO_SERVER_URL: http://localhost:9000
       MINIO_DOMAIN: "frame.leamech.com"
       MINIO_CONSOLE_ADDRESS: ":9095"
       MINIO_API_ADDRESS: ":9090"
