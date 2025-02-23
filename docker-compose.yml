@@ -27,8 +27,9 @@ services:
     environment:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
-      MINIO_SERVER_URL: "https://frame.leamech.com"
-      MINIO_BROWSER_REDIRECT_URL: "https://frame.leamech.com/minio"
+      MINIO_BROWSER_REDIRECT_URL: "http://frame.leamech.com/minio"
+      MINIO_SERVER_URL: "http://frame.leamech.com"
+      MINIO_DOMAIN: "frame.leamech.com"
     volumes:
       - minio_data:/data
     command: server /data --address ":9090" --console-address ":9095"
