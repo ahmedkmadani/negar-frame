@@ -87,6 +87,7 @@ redis_pool = redis.ConnectionPool(
     max_connections=10
 )
 
+
 def get_connected_clients():
     try:
         if hasattr(socketio, 'server'):
@@ -156,7 +157,22 @@ def listen_to_channel():
                                             content_type='image/png'
                                         )
                                         logger.info(f"Uploaded to MinIO: {filename}")
-
+                                        
+                                        # Publish to AI channel
+                                        try:
+                                            r = redis.Redis(connection_pool=redis_pool)
+                                            ai_message = {
+                                                'bucket': MINIO_BUCKET,
+                                                'filename': filename,
+                                                'timestamp': timestamp,
+                                                'camera_id': camera_list[0],
+                                                'upload_time': datetime.now().isoformat()
+                                            }
+                                            r.publish('ai_channel', str(ai_message))
+                                            logger.info(f"Published to AI channel: {filename}")
+                                        except Exception as e:
+                                            logger.error(f"Failed to publish to AI channel: {e}")
+                                        
                                         # Prepare WebSocket data
                                         img_buffer.seek(0)
                                         base64_image = b64encode(img_buffer.read()).decode('utf-8')
