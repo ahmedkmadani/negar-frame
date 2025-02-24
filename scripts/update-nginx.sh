@@ -8,9 +8,10 @@ NC='\033[0m' # No Color
 
 # Paths
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-NGINX_CONF_PATH="/etc/nginx/sites-available/negar-frame.conf"
-NGINX_CONF_ENABLED="/etc/nginx/sites-enabled/negar-frame.conf"
-LOCAL_CONF_PATH="${SCRIPT_DIR}/negar-frame.conf"
+NGINX_CONF_PATH="/etc/nginx/sites-available/frame.leamech.com"
+NGINX_MINIO_CONF_PATH="/etc/nginx/sites-available/dev-minio.leamech.com"
+LOCAL_CONF_PATH="${SCRIPT_DIR}/frame.leamech.com.conf"
+LOCAL_MINIO_CONF_PATH="${SCRIPT_DIR}/dev-minio.leamech.com.conf"
 
 # Function to print status messages
 print_status() {
