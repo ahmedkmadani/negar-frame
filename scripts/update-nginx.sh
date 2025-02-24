@@ -8,9 +8,7 @@ NC='\033[0m' # No Color
 
 # Paths
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-NGINX_CONF_PATH="/etc/nginx/sites-available/frame.leamech.com"
 NGINX_MINIO_CONF_PATH="/etc/nginx/sites-available/dev-minio.leamech.com"
-LOCAL_CONF_PATH="${SCRIPT_DIR}/frame.leamech.com.conf"
 LOCAL_MINIO_CONF_PATH="${SCRIPT_DIR}/dev-minio.leamech.com.conf"
 
 # Function to print status messages
@@ -33,24 +31,27 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 # Check if local configuration file exists
-if [ ! -f "$LOCAL_CONF_PATH" ]; then
-    print_error "Local configuration file not found at $LOCAL_CONF_PATH"
+if [ ! -f "$LOCAL_MINIO_CONF_PATH" ]; then
+    print_error "Local MinIO configuration file not found at $LOCAL_MINIO_CONF_PATH"
     exit 1
 fi
 
 # Backup current configuration
-print_status "Creating backup of current Nginx configuration..."
-BACKUP_PATH="/etc/nginx/sites-available/frame.leamech.com.backup.$(date +%Y%m%d_%H%M%S)"
-if cp "$NGINX_CONF_PATH" "$BACKUP_PATH"; then
-    print_success "Backup created at $BACKUP_PATH"
-else
-    print_error "Failed to create backup"
-    exit 1
+print_status "Creating backup of current MinIO Nginx configuration..."
+BACKUP_MINIO_PATH="/etc/nginx/sites-available/dev-minio.leamech.com.backup.$(date +%Y%m%d_%H%M%S)"
+if [ -f "$NGINX_MINIO_CONF_PATH" ]; then
+    cp "$NGINX_MINIO_CONF_PATH" "$BACKUP_MINIO_PATH"
+    print_success "Backup created at $BACKUP_MINIO_PATH"
 fi
 
 # Copy new configuration
-print_status "Copying new configuration..."
-cp "$LOCAL_CONF_PATH" "$NGINX_CONF_PATH"
+print_status "Copying new MinIO configuration..."
+cp "$LOCAL_MINIO_CONF_PATH" "$NGINX_MINIO_CONF_PATH"
+
+# Create symbolic link if it doesn't exist
+if [ ! -L "/etc/nginx/sites-enabled/dev-minio.leamech.com" ]; then
+    ln -s "$NGINX_MINIO_CONF_PATH" "/etc/nginx/sites-enabled/"
+fi
 
 # Test Nginx configuration
 print_status "Testing Nginx configuration..."
@@ -59,7 +60,7 @@ nginx -t
 if [ $? -ne 0 ]; then
     print_error "Nginx configuration test failed"
     print_status "Restoring backup..."
-    cp "$BACKUP_PATH" "$NGINX_CONF_PATH"
+    [ -f "$BACKUP_MINIO_PATH" ] && cp "$BACKUP_MINIO_PATH" "$NGINX_MINIO_CONF_PATH"
     print_status "Please check your configuration and try again"
     exit 1
 fi
@@ -73,7 +74,7 @@ if [ $? -eq 0 ]; then
 else
     print_error "Failed to reload Nginx"
     print_status "Restoring backup..."
-    cp "$BACKUP_PATH" "$NGINX_CONF_PATH"
+    [ -f "$BACKUP_MINIO_PATH" ] && cp "$BACKUP_MINIO_PATH" "$NGINX_MINIO_CONF_PATH"
     systemctl reload nginx
     exit 1
 fi
@@ -92,4 +93,4 @@ print_status "Checking Nginx status..."
 systemctl status nginx --no-pager
 
 print_success "Update complete!"
-echo -e "${GREEN}Backup file: $BACKUP_PATH${NC}" 
+[ -f "$BACKUP_MINIO_PATH" ] && echo -e "${GREEN}MinIO backup file: $BACKUP_MINIO_PATH${NC}" 
