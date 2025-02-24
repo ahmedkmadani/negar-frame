@@ -27,10 +27,10 @@ services:
     environment:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
-      MINIO_BROWSER_REDIRECT_URL: "https://dev-minio.leamech.com"
-      MINIO_SERVER_URL: "https://dev-minio.leamech.com"
-      MINIO_API_ADDRESS: "https://dev-minio.leamech.com/minio"
-      MINIO_DOMAIN: "dev-minio.leamech.com"
+      MINIO_BROWSER_REDIRECT_URL: "https://minio-dev.leamech.com"
+      MINIO_SERVER_URL: "https://minio-dev.leamech.com"
+      MINIO_API_ADDRESS: "https://minio-dev.leamech.com/minio"
+      MINIO_DOMAIN: "minio-dev.leamech.com"
       MINIO_CONSOLE_ADDRESS: ":9095"
     volumes:
       - minio_data:/data
