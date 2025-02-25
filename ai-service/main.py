@@ -63,23 +63,47 @@ def process_image(image_data):
     nparr = np.frombuffer(image_data, np.uint8)
     img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
     
-    # Run YOLOv8 detection
+    # Run YOLOv8 detection with pose estimation
     results = model(img)
     
     # Convert back to PIL Image for drawing
     img_pil = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
     draw = ImageDraw.Draw(img_pil)
     
-    # Draw boxes around detected persons
+    # Process each detection
     for result in results[0].boxes.data:
         x1, y1, x2, y2, conf, class_id = result
         if int(class_id) == 0:  # class 0 is person in COCO dataset
             # Draw rectangle
             draw.rectangle([x1, y1, x2, y2], outline='red', width=2)
             
-    logger.info("results[0].boxes.data: ", results[0])
-    logger.info("results: ", results)
-
+            # Get keypoints if available
+            if hasattr(results[0], 'keypoints'):
+                keypoints = results[0].keypoints.data
+                for kps in keypoints:
+                    # Process each keypoint
+                    for kp in kps:
+                        x, y, conf = kp
+                        if conf > 0.5:  # Only process keypoints with confidence > 0.5
+                            # Draw keypoint
+                            draw.ellipse([x-2, y-2, x+2, y+2], fill='blue')
+                    
+                    # Log keypoint data
+                    logger.info("Person keypoints: ")
+                    keypoint_names = [
+                        "nose", "left_eye", "right_eye", "left_ear", "right_ear",
+                        "left_shoulder", "right_shoulder", "left_elbow", "right_elbow",
+                        "left_wrist", "right_wrist", "left_hip", "right_hip",
+                        "left_knee", "right_knee", "left_ankle", "right_ankle"
+                    ]
+                    
+                    for i, kp in enumerate(kps):
+                        x, y, conf = kp
+                        if conf > 0.5:
+                            logger.info(f"{keypoint_names[i]}: x={x:.2f}, y={y:.2f}, confidence={conf:.2f}")
+    
+    logger.info("Detection boxes: ", results[0].boxes.data)
+    logger.info("Full results: ", results)
     
     # Convert back to bytes
     img_byte_arr = io.BytesIO()
