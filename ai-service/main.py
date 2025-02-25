@@ -76,6 +76,10 @@ def process_image(image_data):
         if int(class_id) == 0:  # class 0 is person in COCO dataset
             # Draw rectangle
             draw.rectangle([x1, y1, x2, y2], outline='red', width=2)
+            
+    logger.info("results[0].boxes.data: ", results[0])
+    logger.info("results: ", results)
+
     
     # Convert back to bytes
     img_byte_arr = io.BytesIO()
