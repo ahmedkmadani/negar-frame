@@ -39,7 +39,7 @@ socketio = SocketIO(
 )
 
 # MinIO configuration
-MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "minio:9000")  # Use the Docker service name
+MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "minio-dev.leamech.com")  # Use the Docker service name
 MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY", "negar-dev")  # Use the root credentials from docker-compose
 MINIO_SECRET_KEY = os.getenv("MINIO_SECRET_KEY", "negar-dev")  # Use the root credentials from docker-compose
 MINIO_BUCKET = "frames"
