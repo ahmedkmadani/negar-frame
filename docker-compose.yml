@@ -68,7 +68,7 @@ services:
       context: ./frame-websocket
       dockerfile: Dockerfile
     ports:
-      - "8001:8001"
+      - "5004:5004"
     environment:
       - REDIS_HOST=34.55.93.180
       - REDIS_PORT=6379
