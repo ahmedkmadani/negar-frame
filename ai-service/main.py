@@ -267,7 +267,7 @@ def test_process_images():
         )
         
         # List all objects in yolo-images bucket
-        objects = list(minio_client.list_objects(MINIO_BUCKET_PROCESSED))
+        objects = list(minio_client.list_objects(MINIO_BUCKET))
         total_images = len(objects)
         logger.info(f"Found {total_images} images to process")
         
@@ -277,7 +277,7 @@ def test_process_images():
                 logger.info(f"\nProcessing image {idx}/{total_images}: {filename}")
                 
                 # Get image data
-                image_data = minio_client.get_object(MINIO_BUCKET_PROCESSED, filename).read()
+                image_data = minio_client.get_object(MINIO_BUCKET, filename).read()
                 
                 # Process image
                 start_time = time.time()
@@ -286,13 +286,13 @@ def test_process_images():
                 
                 # Upload processed image
                 processed_filename = f"test_processed_{filename}"
-                # minio_client.put_object(
-                #     MINIO_BUCKET_PROCESSED,
-                #     processed_filename,
-                #     processed_image,
-                #     processed_image.getbuffer().nbytes,
-                #     content_type='image/png'
-                # )
+                minio_client.put_object(
+                    MINIO_BUCKET_PROCESSED,
+                    processed_filename,
+                    processed_image,
+                    processed_image.getbuffer().nbytes,
+                    content_type='image/png'
+                )
                 
                 
                 # Publish results
