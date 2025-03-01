@@ -42,6 +42,10 @@ class Settings:
 
 settings = Settings()
 
+MINIO_BUCKET = "frames"
+MINIO_BUCKET_PROCESSED = "yolo-images"
+MINIO_BUCKET_PROCESSED_TEST = "yolo-images-test"
+
 # Add MinIO configuration
 class MinioSettings:
     MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "minio-dev.leamech.com")
@@ -49,7 +53,7 @@ class MinioSettings:
     MINIO_SECRET_KEY = os.getenv("MINIO_SECRET_KEY", "negar-dev")
     MINIO_BUCKET_PROCESSED = "yolo-images"
     MINIO_BUCKET_PROCESSED_TEST = "yolo-images-test"    
-    MINIO_SECURE = True
+    MINIO_SECURE = False
 
 minio_settings = MinioSettings()
 
@@ -60,6 +64,35 @@ minio_client = Minio(
     secret_key=minio_settings.MINIO_SECRET_KEY,
     secure=minio_settings.MINIO_SECURE
 )
+
+def ensure_bucket_exists(bucket_name):
+    """Create bucket if it doesn't exist and set public read access"""
+    try:
+        if not minio_client.bucket_exists(bucket_name):
+            minio_client.make_bucket(bucket_name)
+            logger.info(f"Created bucket: {bucket_name}")
+        
+        # Set public read policy
+        policy = {
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Effect": "Allow",
+                    "Principal": {"AWS": "*"},
+                    "Action": ["s3:GetObject"],
+                    "Resource": [f"arn:aws:s3:::{bucket_name}/*"]
+                }
+            ]
+        }
+        minio_client.set_bucket_policy(bucket_name, json.dumps(policy))
+        logger.info(f"Set public read policy for bucket: {bucket_name}")
+    except Exception as e:
+        logger.error(f"Error setting up bucket {bucket_name}: {e}")
+
+# Ensure all required buckets exist
+ensure_bucket_exists(MINIO_BUCKET)
+ensure_bucket_exists(MINIO_BUCKET_PROCESSED)
+ensure_bucket_exists(MINIO_BUCKET_PROCESSED_TEST)
 
 class ConnectionManager:
     def __init__(self):

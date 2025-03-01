@@ -23,7 +23,7 @@ MODEL_PATH = "yolov8n-pose.pt"
 model = YOLO(MODEL_PATH).to('cpu') # Use yolov8n (nano) for faster CPU inference
 
 # MinIO configuration
-MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "minio:9000")
+MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "minio-dev.leamech.com")
 MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY", "negar-dev")
 MINIO_SECRET_KEY = os.getenv("MINIO_SECRET_KEY", "negar-dev")
 MINIO_BUCKET = "frames"
@@ -39,7 +39,7 @@ minio_client = Minio(
     MINIO_ENDPOINT,
     access_key=MINIO_ACCESS_KEY,
     secret_key=MINIO_SECRET_KEY,
-    secure=False  # Use False for local development
+    secure=True  # Use False for local development
 )
 
 # Ensure buckets exist and have proper permissions
@@ -75,7 +75,15 @@ ensure_bucket_exists(MINIO_BUCKET_PROCESSED_TEST)
 # Update the URL generation function
 def get_minio_url(bucket, filename):
     """Generate a URL for a MinIO object"""
-    return f"https://{MINIO_ENDPOINT}/{bucket}/{filename}"
+    try:
+        url = minio_client.presigned_get_object(
+            bucket_name=bucket,
+            object_name=filename,
+            expires=timedelta(hours=1)
+        )
+        return url
+    except Exception as e:
+        return f"https://{MINIO_ENDPOINT}/{bucket}/{filename}"
 
 def process_image(image_data):
 
@@ -258,6 +266,8 @@ def main():
                             'original_bucket': bucket,
                             'processed_filename': processed_filename,
                             'processed_bucket': MINIO_BUCKET_PROCESSED,
+                            'original_url': original_url,
+                            'processed_url': processed_url,
                             'status': 'success',
                             'processing_time': processing_time,
                             'detections': {
@@ -327,7 +337,7 @@ def test_process_images():
                 
                 # Upload processed image
                 processed_filename = f"test_processed_{filename}"
-                original_url = get_minio_url(MINIO_BUCKET_PROCESSED, filename)
+                original_url = get_minio_url(MINIO_BUCKET, filename)
                 processed_url = get_minio_url(MINIO_BUCKET_PROCESSED_TEST, processed_filename)
                 minio_client.put_object(
                     MINIO_BUCKET_PROCESSED_TEST,
@@ -337,13 +347,17 @@ def test_process_images():
                     content_type='image/png'
                 )
                 
+                logger.info(f"Original image: {original_url}")
+                logger.info(f"Processed image: {processed_url}")
                 
                 # Publish results
                 result_data = {
                     'original_filename': filename,
-                    'original_bucket': MINIO_BUCKET_PROCESSED,
+                    'original_bucket': MINIO_BUCKET,
                     'processed_filename': processed_filename,
                     'processed_bucket': MINIO_BUCKET_PROCESSED_TEST,
+                    'original_url': original_url,
+                    'processed_url': processed_url,
                     'status': 'success',
                     'processing_time': processing_time,
                     'detections': {

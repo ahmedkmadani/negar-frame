@@ -46,34 +46,42 @@ MINIO_BUCKET = "frames"
 
 logger.info(f"Connecting to MinIO at {MINIO_ENDPOINT}")
 
-# Initialize MinIO client
-try:
-    minio_client = Minio(
-        MINIO_ENDPOINT,
-        access_key=MINIO_ACCESS_KEY,
-        secret_key=MINIO_SECRET_KEY,
-        secure=False  # Set to True if using HTTPS
-    )
-    logger.info(f"MinIO client initialized successfully: {minio_client}")
-    logger.info(f"MinIO client initialized successfully: {minio_client.bucket_exists(MINIO_BUCKET)}")
-    logger.info(f"MinIO access key: {MINIO_ACCESS_KEY}")
-    logger.info(f"MinIO endpoint: {MINIO_ENDPOINT}")
-    logger.info(f"MinIO secret key: {MINIO_SECRET_KEY}")
-    logger.info("MinIO client initialized successfully")
-except Exception as e:
-    logger.error(f"Failed to initialize MinIO client: {e}")
-    raise
+minio_client = Minio(
+    MINIO_ENDPOINT,
+    access_key=MINIO_ACCESS_KEY,
+    secret_key=MINIO_SECRET_KEY,
+    secure=False
+)
 
-# Create bucket if it doesn't exist
-try:
-    if not minio_client.bucket_exists(MINIO_BUCKET):
-        minio_client.make_bucket(MINIO_BUCKET)
-        logger.info(f"Created new bucket: {MINIO_BUCKET}")
-    else:
-        logger.info(f"Bucket {MINIO_BUCKET} already exists")
-except Exception as e:
-    logger.error(f"Error checking/creating bucket: {e}")
-    raise
+def ensure_bucket_exists(bucket_name):
+    """Create bucket if it doesn't exist and set public read access"""
+    try:
+        if not minio_client.bucket_exists(bucket_name):
+            minio_client.make_bucket(bucket_name)
+            logger.info(f"Created bucket: {bucket_name}")
+        
+        # Set public read policy
+        policy = {
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Effect": "Allow",
+                    "Principal": {"AWS": "*"},
+                    "Action": ["s3:GetObject"],
+                    "Resource": [f"arn:aws:s3:::{bucket_name}/*"]
+                }
+            ]
+        }
+        minio_client.set_bucket_policy(bucket_name, json.dumps(policy))
+        logger.info(f"Set public read policy for bucket: {bucket_name}")
+    except Exception as e:
+        logger.error(f"Error setting up bucket {bucket_name}: {e}")
+
+# Ensure all required buckets exist
+ensure_bucket_exists(MINIO_BUCKET)
+ensure_bucket_exists(MINIO_BUCKET_PROCESSED)
+ensure_bucket_exists(MINIO_BUCKET_PROCESSED_TEST)
+
 
 # Redis connection pool configuration
 REDIS_HOST = os.getenv('REDIS_HOST', '34.55.93.180')
