@@ -86,16 +86,15 @@ def get_minio_url(bucket, filename):
         return f"https://{MINIO_ENDPOINT}/{bucket}/{filename}"
 
 def process_image(image_data):
-
     logger.info("\n" + "="*50)
     logger.info(f"Processing image")
     logger.info("="*50 + "\n")
                 
-                # Decode image
+    # Decode image
     nparr = np.frombuffer(image_data, np.uint8)
     img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
                 
-                # Run detection
+    # Run detection
     results = model(img)
                 
     # Convert to PIL image for drawing
@@ -104,6 +103,13 @@ def process_image(image_data):
                 
     # Initialize people_data list to store all detected persons
     people_data = []
+    
+    # Define colors for different joint groups
+    color_map = {
+        "head": (255, 0, 0),       # Red for head
+        "upper_body": (0, 255, 0), # Green for upper body
+        "lower_body": (0, 0, 255)  # Blue for lower body
+    }
     
     # Check if results contain detections
     if len(results) > 0 and hasattr(results[0], 'boxes') and len(results[0].boxes) > 0:
@@ -128,9 +134,9 @@ def process_image(image_data):
                 
                 # Define joint groups
                 joint_groups = {
-                    "Head": ["nose", "left_eye", "right_eye", "left_ear", "right_ear"],
-                    "Upper Body": ["left_shoulder", "right_shoulder", "left_elbow", "right_elbow", "left_wrist", "right_wrist"],
-                    "Lower Body": ["left_hip", "right_hip", "left_knee", "right_knee", "left_ankle", "right_ankle"]
+                    "head": ["nose", "left_eye", "right_eye", "left_ear", "right_ear"],
+                    "upper_body": ["left_shoulder", "right_shoulder", "left_elbow", "right_elbow", "left_wrist", "right_wrist"],
+                    "lower_body": ["left_hip", "right_hip", "left_knee", "right_knee", "left_ankle", "right_ankle"]
                 }
                 
                 keypoint_names = [
@@ -140,19 +146,74 @@ def process_image(image_data):
                     "left_knee", "right_knee", "left_ankle", "right_ankle"
                 ]
                 
-                # Log and draw keypoints
+                # Log and draw keypoints with different colors based on body part
                 for group_name, joints in joint_groups.items():
                     logger.info(f"{group_name}:")
+                    color = color_map.get(group_name.lower().replace(" ", "_"), (255, 255, 0))  # Default to yellow
+                    
                     for joint in joints:
                         try:
                             idx = keypoint_names.index(joint)
                             x, y, conf = keypoints[idx]
                             if conf > 0.5:
-                                draw.ellipse([x-3, y-3, x+3, y+3], fill='blue')
+                                # Draw a filled circle for the joint
+                                circle_radius = 5
+                                draw.ellipse(
+                                    [x-circle_radius, y-circle_radius, x+circle_radius, y+circle_radius], 
+                                    fill=color, 
+                                    outline=(0, 0, 0)
+                                )
+                                
+                                # Add joint name as text
+                                draw.text((x+7, y-7), joint.replace("_", " "), fill=(0, 0, 0))
+                                
                                 logger.info(f"  {joint:12s}: ({x:6.1f}, {y:6.1f}) conf={conf:.2f}")
                         except Exception as e:
                             logger.error(f"Error processing joint {joint}: {str(e)}")
                     logger.info("")
+                
+                # Draw skeleton lines connecting the joints
+                skeleton_connections = [
+                    # Head
+                    ("nose", "left_eye"), ("nose", "right_eye"),
+                    ("left_eye", "left_ear"), ("right_eye", "right_ear"),
+                    
+                    # Torso
+                    ("left_shoulder", "right_shoulder"), 
+                    ("left_shoulder", "left_hip"), ("right_shoulder", "right_hip"),
+                    ("left_hip", "right_hip"),
+                    
+                    # Arms
+                    ("left_shoulder", "left_elbow"), ("left_elbow", "left_wrist"),
+                    ("right_shoulder", "right_elbow"), ("right_elbow", "right_wrist"),
+                    
+                    # Legs
+                    ("left_hip", "left_knee"), ("left_knee", "left_ankle"),
+                    ("right_hip", "right_knee"), ("right_knee", "right_ankle")
+                ]
+                
+                # Draw the skeleton lines
+                for connection in skeleton_connections:
+                    try:
+                        idx1 = keypoint_names.index(connection[0])
+                        idx2 = keypoint_names.index(connection[1])
+                        
+                        x1, y1, conf1 = keypoints[idx1]
+                        x2, y2, conf2 = keypoints[idx2]
+                        
+                        if conf1 > 0.5 and conf2 > 0.5:
+                            # Determine line color based on body part
+                            if connection[0] in joint_groups["head"] and connection[1] in joint_groups["head"]:
+                                line_color = color_map["head"]
+                            elif connection[0] in joint_groups["upper_body"] or connection[1] in joint_groups["upper_body"]:
+                                line_color = color_map["upper_body"]
+                            else:
+                                line_color = color_map["lower_body"]
+                                
+                            # Draw line with width 2
+                            draw.line([(x1, y1), (x2, y2)], fill=line_color, width=2)
+                    except Exception as e:
+                        logger.error(f"Error drawing connection {connection}: {str(e)}")
             
             person_data = {
                 'confidence': float(conf),
@@ -201,7 +262,42 @@ def process_image(image_data):
             
             people_data.append(person_data)
     
-    # Convert back to bytes
+    # Add a legend to the image
+    legend_x = 10
+    legend_y = 10
+    legend_spacing = 25
+    
+    # Draw legend background
+    legend_width = 180
+    legend_height = 100
+    draw.rectangle(
+        [legend_x, legend_y, legend_x + legend_width, legend_y + legend_height],
+        fill=(255, 255, 255, 180),  # Semi-transparent white
+        outline=(0, 0, 0)
+    )
+    
+    # Add legend title
+    draw.text((legend_x + 10, legend_y + 10), "JOINT DETECTION", fill=(0, 0, 0))
+    
+    # Add legend items
+    for i, (group, color) in enumerate(color_map.items()):
+        y_pos = legend_y + 35 + (i * legend_spacing)
+        
+        # Draw color sample
+        draw.ellipse(
+            [legend_x + 10, y_pos, legend_x + 20, y_pos + 10], 
+            fill=color, 
+            outline=(0, 0, 0)
+        )
+        
+        # Draw label
+        draw.text(
+            (legend_x + 30, y_pos - 2), 
+            group.replace("_", " ").title(), 
+            fill=(0, 0, 0)
+        )
+    
+    # Save the processed image to a byte array
     img_byte_arr = io.BytesIO()
     img_pil.save(img_byte_arr, format='PNG')
     img_byte_arr.seek(0)

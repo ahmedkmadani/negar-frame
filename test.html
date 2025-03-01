@@ -1,111 +1,424 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>AI Results WebSocket Test</title>
+    <title>Leamech AI Vision Monitor</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <script src="https://sdk.amazonaws.com/js/aws-sdk-2.1048.0.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --accent-color: #1abc9c;
+            --light-color: #ecf0f1;
+            --dark-color: #2c3e50;
+            --danger-color: #e74c3c;
+            --success-color: #2ecc71;
+            --warning-color: #f39c12;
+        }
+        
+        body {
+            font-family: 'Lato', sans-serif;
+            background-color: #f8f9fa;
+            color: var(--dark-color);
+            line-height: 1.6;
+        }
+        
+        .navbar-brand {
+            font-weight: 900;
+            letter-spacing: 1px;
+            color: var(--primary-color) !important;
+        }
+        
+        .navbar {
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            background-color: white;
+        }
+        
+        h1, h2, h3, h4, h5, h6 {
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+        
+        .page-header {
+            padding: 2rem 0;
+            text-align: center;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            margin-bottom: 2rem;
+            border-radius: 0 0 10px 10px;
+        }
+        
+        .page-header h2 {
+            color: white;
+            font-weight: 900;
+            letter-spacing: 1px;
+        }
+        
+        .page-header p {
+            font-weight: 300;
+            opacity: 0.9;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
         .result-card {
-            margin-bottom: 15px;
+            margin-bottom: 25px;
             transition: all 0.3s ease;
+            border: none;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
         }
+        
         .result-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
         }
+        
+        .card-title {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: var(--primary-color);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
         .status-badge {
             position: absolute;
-            top: 10px;
-            right: 10px;
+            top: 15px;
+            right: 15px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            padding: 0.4rem 0.8rem;
+            border-radius: 50px;
         }
+        
         .connection-info {
             position: fixed;
             bottom: 20px;
             right: 20px;
             z-index: 1000;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            padding: 15px;
+            background-color: white;
+            border-left: 5px solid var(--secondary-color);
         }
+        
         .debug-panel {
             position: fixed;
-            top: 20px;
+            top: 80px;
             right: 20px;
-            width: 300px;
-            max-height: 400px;
+            width: 350px;
+            max-height: 500px;
             overflow-y: auto;
             z-index: 1000;
             display: none;
+            border-radius: 10px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
         }
+        
         .image-container {
             position: relative;
             margin-bottom: 15px;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
         }
+        
         .image-container img {
-            max-width: 100%;
+            width: 100%;
             height: auto;
+            transition: transform 0.3s ease;
         }
+        
+        .image-container:hover img {
+            transform: scale(1.03);
+        }
+        
         .nav-tabs {
-            margin-bottom: 20px;
+            margin-bottom: 30px;
+            border-bottom: 2px solid var(--light-color);
         }
+        
+        .nav-tabs .nav-link {
+            border: none;
+            color: var(--dark-color);
+            font-weight: 600;
+            padding: 12px 20px;
+            border-radius: 0;
+            margin-right: 5px;
+            transition: all 0.2s ease;
+        }
+        
+        .nav-tabs .nav-link:hover {
+            color: var(--secondary-color);
+            background-color: rgba(52, 152, 219, 0.05);
+        }
+        
+        .nav-tabs .nav-link.active {
+            color: var(--secondary-color);
+            border-bottom: 3px solid var(--secondary-color);
+            background-color: transparent;
+        }
+        
         .tab-content {
             padding-top: 20px;
         }
+        
         .loading-spinner {
             display: inline-block;
-            width: 2rem;
-            height: 2rem;
+            width: 1.5rem;
+            height: 1.5rem;
             vertical-align: text-bottom;
-            border: 0.25em solid currentColor;
+            border: 0.2em solid currentColor;
             border-right-color: transparent;
             border-radius: 50%;
             animation: spinner-border .75s linear infinite;
         }
+        
         @keyframes spinner-border {
             to { transform: rotate(360deg); }
         }
+        
+        .btn {
+            border-radius: 50px;
+            padding: 0.5rem 1.2rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary {
+            background-color: var(--secondary-color);
+            border-color: var(--secondary-color);
+        }
+        
+        .btn-primary:hover {
+            background-color: #2980b9;
+            border-color: #2980b9;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.3);
+        }
+        
+        .alert {
+            border-radius: 10px;
+            border: none;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+        }
+        
+        .alert-success {
+            background-color: rgba(46, 204, 113, 0.1);
+            color: var(--success-color);
+            border-left: 4px solid var(--success-color);
+        }
+        
+        .alert-info {
+            background-color: rgba(52, 152, 219, 0.1);
+            color: var(--secondary-color);
+            border-left: 4px solid var(--secondary-color);
+        }
+        
+        .alert-warning {
+            background-color: rgba(243, 156, 18, 0.1);
+            color: var(--warning-color);
+            border-left: 4px solid var(--warning-color);
+        }
+        
+        .alert-danger {
+            background-color: rgba(231, 76, 60, 0.1);
+            color: var(--danger-color);
+            border-left: 4px solid var(--danger-color);
+        }
+        
+        .detection-details {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+        }
+        
+        pre {
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            padding: 10px;
+            color: var(--dark-color);
+        }
+        
+        .footer {
+            background-color: white;
+            padding: 2rem 0;
+            margin-top: 3rem;
+            border-top: 1px solid #eee;
+            text-align: center;
+            color: #7f8c8d;
+            font-weight: 300;
+        }
+        
+        .footer a {
+            color: var(--secondary-color);
+            text-decoration: none;
+        }
+        
+        .stats-card {
+            background-color: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            text-align: center;
+        }
+        
+        .stats-card .icon {
+            font-size: 2rem;
+            color: var(--secondary-color);
+            margin-bottom: 10px;
+        }
+        
+        .stats-card .number {
+            font-size: 2rem;
+            font-weight: 900;
+            color: var(--primary-color);
+        }
+        
+        .stats-card .label {
+            font-size: 0.9rem;
+            color: #7f8c8d;
+            font-weight: 400;
+        }
     </style>
 </head>
-<body class="bg-light">
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-light">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-eye me-2"></i>LEAMECH
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="#">Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">Analytics</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">Settings</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Header -->
+    <header class="page-header">
+        <div class="container">
+            <h2>AI Vision Monitor</h2>
+            <p>Real-time computer vision analytics and monitoring</p>
+        </div>
+    </header>
+
     <div class="container py-4">
-        <h2 class="mb-4">AI Results Monitor</h2>
+        <!-- Stats Row -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <div class="icon"><i class="fas fa-camera"></i></div>
+                    <div class="number" id="totalImages">0</div>
+                    <div class="label">Total Images</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <div class="icon"><i class="fas fa-user-check"></i></div>
+                    <div class="number" id="totalDetections">0</div>
+                    <div class="label">Persons Detected</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <div class="icon"><i class="fas fa-tachometer-alt"></i></div>
+                    <div class="number" id="avgProcessingTime">0</div>
+                    <div class="label">Avg. Processing Time (s)</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <div class="icon"><i class="fas fa-check-circle"></i></div>
+                    <div class="number" id="successRate">0%</div>
+                    <div class="label">Success Rate</div>
+                </div>
+            </div>
+        </div>
         
+        <!-- Tabs -->
         <ul class="nav nav-tabs" id="myTab" role="tablist">
             <li class="nav-item" role="presentation">
-                <button class="nav-link active" id="live-tab" data-bs-toggle="tab" data-bs-target="#live" type="button" role="tab" aria-controls="live" aria-selected="true">Live Results</button>
+                <button class="nav-link active" id="live-tab" data-bs-toggle="tab" data-bs-target="#live" type="button" role="tab" aria-controls="live" aria-selected="true">
+                    <i class="fas fa-satellite-dish me-2"></i>Live Results
+                </button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="recent-tab" data-bs-toggle="tab" data-bs-target="#recent" type="button" role="tab" aria-controls="recent" aria-selected="false">Recent Images</button>
+                <button class="nav-link" id="recent-tab" data-bs-toggle="tab" data-bs-target="#recent" type="button" role="tab" aria-controls="recent" aria-selected="false">
+                    <i class="fas fa-history me-2"></i>Recent Images
+                </button>
             </li>
         </ul>
         
         <div class="tab-content" id="myTabContent">
             <!-- Live Results Tab -->
             <div class="tab-pane fade show active" id="live" role="tabpanel" aria-labelledby="live-tab">
-                <div id="status" class="alert alert-info">Connecting...</div>
+                <div id="status" class="alert alert-info">
+                    <i class="fas fa-sync-alt fa-spin me-2"></i>Connecting to WebSocket...
+                </div>
                 <div id="results" class="row"></div>
             </div>
             
             <!-- Recent Images Tab -->
             <div class="tab-pane fade" id="recent" role="tabpanel" aria-labelledby="recent-tab">
                 <div id="recentStatus" class="alert alert-info">
-                    <div class="loading-spinner"></div> Loading recent images...
+                    <i class="fas fa-sync-alt fa-spin me-2"></i>Loading recent images...
                 </div>
                 <div id="recentImages" class="row"></div>
             </div>
         </div>
     </div>
 
-    <div id="connectionInfo" class="connection-info alert alert-secondary">
-        <small>Monitoring connection...</small>
+    <div id="connectionInfo" class="connection-info">
+        <small><i class="fas fa-signal me-2"></i>Monitoring connection...</small>
     </div>
 
     <div id="debugPanel" class="debug-panel card">
         <div class="card-body">
-            <h6 class="card-title">Debug Log</h6>
+            <h6 class="card-title"><i class="fas fa-bug me-2"></i>Debug Log</h6>
             <div id="debugLog" class="small"></div>
         </div>
     </div>
 
+    <footer class="footer">
+        <div class="container">
+            <p>© 2023 Leamech. All rights reserved. | <a href="#">Privacy Policy</a> | <a href="#">Terms of Service</a></p>
+        </div>
+    </footer>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        // Stats tracking
+        let stats = {
+            totalImages: 0,
+            totalDetections: 0,
+            totalProcessingTime: 0,
+            successCount: 0,
+            errorCount: 0
+        };
+
         const resultsDiv = document.getElementById('results');
         const statusDiv = document.getElementById('status');
         const connectionInfo = document.getElementById('connectionInfo');
@@ -116,12 +429,29 @@
         let reconnectAttempts = 0;
         let lastHeartbeat = Date.now();
 
+        // Update stats display
+        function updateStatsDisplay() {
+            document.getElementById('totalImages').textContent = stats.totalImages;
+            document.getElementById('totalDetections').textContent = stats.totalDetections;
+            
+            const avgTime = stats.totalImages > 0 
+                ? (stats.totalProcessingTime / stats.totalImages).toFixed(2) 
+                : "0.00";
+            document.getElementById('avgProcessingTime').textContent = avgTime;
+            
+            const total = stats.successCount + stats.errorCount;
+            const successRate = total > 0 
+                ? Math.round((stats.successCount / total) * 100) 
+                : 0;
+            document.getElementById('successRate').textContent = successRate + "%";
+        }
+
         // Fetch recent images when the Recent Images tab is clicked
         document.getElementById('recent-tab').addEventListener('click', fetchRecentImages);
 
         // Function to fetch recent images from the API
         async function fetchRecentImages() {
-            recentStatusDiv.innerHTML = '<div class="loading-spinner"></div> Loading recent images...';
+            recentStatusDiv.innerHTML = '<i class="fas fa-sync-alt fa-spin me-2"></i>Loading recent images...';
             recentImagesDiv.innerHTML = '';
             
             try {
@@ -135,41 +465,45 @@
                 
                 if (data.status === 'success' && data.images && data.images.length > 0) {
                     recentStatusDiv.className = 'alert alert-success';
-                    recentStatusDiv.innerHTML = `<strong>Found ${data.count} recent images</strong>`;
+                    recentStatusDiv.innerHTML = `<i class="fas fa-check-circle me-2"></i>Found ${data.count} recent images`;
                     
                     // Display the images
                     data.images.forEach(image => {
                         const imageElement = document.createElement('div');
-                        imageElement.className = 'col-md-6 col-lg-4';
+                        imageElement.className = 'col-md-4';
                         imageElement.innerHTML = `
                             <div class="card result-card">
                                 <div class="card-body">
                                     <h5 class="card-title">${image.filename}</h5>
                                     <p class="card-text">
                                         <small class="text-muted">
-                                            Size: ${formatFileSize(image.size)}<br>
-                                            Last Modified: ${formatDate(image.last_modified)}
+                                            <i class="fas fa-file me-1"></i> ${formatFileSize(image.size)}<br>
+                                            <i class="fas fa-clock me-1"></i> ${formatDate(image.last_modified)}
                                         </small>
                                     </p>
                                     <div class="image-container">
                                         <img src="${image.url}" class="mb-2" alt="${image.filename}">
                                     </div>
-                                    <a href="${image.url}" class="btn btn-sm btn-primary" target="_blank">
-                                        View Full Size
+                                    <a href="${image.url}" class="btn btn-primary btn-sm" target="_blank">
+                                        <i class="fas fa-external-link-alt me-1"></i> View Full Size
                                     </a>
                                 </div>
                             </div>
                         `;
                         recentImagesDiv.appendChild(imageElement);
                     });
+                    
+                    // Update stats
+                    stats.totalImages += data.images.length;
+                    updateStatsDisplay();
                 } else {
                     recentStatusDiv.className = 'alert alert-warning';
-                    recentStatusDiv.innerHTML = '<strong>No recent images found</strong>';
+                    recentStatusDiv.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i>No recent images found';
                 }
             } catch (error) {
                 logDebug('Error fetching recent images:', error);
                 recentStatusDiv.className = 'alert alert-danger';
-                recentStatusDiv.innerHTML = `<strong>Error loading images:</strong> ${error.message}`;
+                recentStatusDiv.innerHTML = `<i class="fas fa-times-circle me-2"></i>Error loading images: ${error.message}`;
             }
         }
 
@@ -191,7 +525,7 @@
             
             ws.onopen = () => {
                 statusDiv.className = 'alert alert-success';
-                statusDiv.innerHTML = '<strong>Connected to WebSocket</strong>';
+                statusDiv.innerHTML = '<i class="fas fa-check-circle me-2"></i>Connected to WebSocket';
                 reconnectAttempts = 0;
                 updateConnectionInfo('Connected');
             };
@@ -212,9 +546,16 @@
                 }
                 
                 const resultElement = document.createElement('div');
-                resultElement.className = 'col-md-6 col-lg-4';
+                resultElement.className = 'col-md-4';
                 
                 if (data.status === 'success') {
+                    // Update stats
+                    stats.totalImages++;
+                    stats.successCount++;
+                    stats.totalDetections += data.detections.total_persons;
+                    stats.totalProcessingTime += data.processing_time;
+                    updateStatsDisplay();
+                    
                     resultElement.innerHTML = `
                         <div class="card result-card">
                             <div class="card-body">
@@ -222,15 +563,15 @@
                                 <h5 class="card-title">${data.original_filename}</h5>
                                 <p class="card-text">
                                     <small class="text-muted">
-                                        Processing Time: ${data.processing_time.toFixed(2)}s<br>
-                                        Persons Detected: ${data.detections.total_persons}
+                                        <i class="fas fa-stopwatch me-1"></i> ${data.processing_time.toFixed(2)}s<br>
+                                        <i class="fas fa-user me-1"></i> ${data.detections.total_persons} persons
                                     </small>
                                 </p>
                                 <div class="image-container">
                                     <img src="${data.processed_url}" class="mb-2" alt="Processed Image">
                                 </div>
-                                <button class="btn btn-sm btn-primary" onclick="toggleDetails(this)">
-                                    Show Details
+                                <button class="btn btn-primary btn-sm" onclick="toggleDetails(this)">
+                                    <i class="fas fa-info-circle me-1"></i> Show Details
                                 </button>
                                 <div class="detection-details mt-2" style="display: none;">
                                     <pre class="small">${JSON.stringify(data.detections, null, 2)}</pre>
@@ -239,12 +580,19 @@
                         </div>
                     `;
                 } else {
+                    // Update stats
+                    stats.totalImages++;
+                    stats.errorCount++;
+                    updateStatsDisplay();
+                    
                     resultElement.innerHTML = `
-                        <div class="card result-card border-danger">
+                        <div class="card result-card">
                             <div class="card-body">
                                 <span class="badge bg-danger status-badge">Error</span>
                                 <h5 class="card-title">${data.filename}</h5>
-                                <p class="card-text text-danger">${data.error}</p>
+                                <p class="card-text text-danger">
+                                    <i class="fas fa-exclamation-triangle me-1"></i> ${data.error}
+                                </p>
                             </div>
                         </div>
                     `;
@@ -255,7 +603,7 @@
             
             ws.onclose = (event) => {
                 statusDiv.className = 'alert alert-warning';
-                statusDiv.innerHTML = `<strong>Disconnected</strong> (Code: ${event.code})`;
+                statusDiv.innerHTML = `<i class="fas fa-exclamation-triangle me-2"></i>Disconnected (Code: ${event.code})`;
                 updateConnectionInfo('Disconnected');
                 
                 // Exponential backoff for reconnection
@@ -273,7 +621,7 @@
             ws.onerror = (error) => {
                 logDebug('WebSocket error:', error);
                 statusDiv.className = 'alert alert-danger';
-                statusDiv.innerHTML = '<strong>Connection Error</strong>';
+                statusDiv.innerHTML = '<i class="fas fa-times-circle me-2"></i>Connection Error';
             };
 
             // Monitor connection health
@@ -288,7 +636,7 @@
 
         function updateConnectionInfo(status) {
             connectionInfo.innerHTML = `
-                <strong>Status:</strong> ${status}<br>
+                <strong><i class="fas fa-signal me-2"></i>Status:</strong> ${status}<br>
                 <small>Last updated: ${new Date().toLocaleTimeString()}</small>
             `;
         }
@@ -297,10 +645,10 @@
             const details = button.nextElementSibling;
             if (details.style.display === 'none') {
                 details.style.display = 'block';
-                button.textContent = 'Hide Details';
+                button.innerHTML = '<i class="fas fa-minus-circle me-1"></i> Hide Details';
             } else {
                 details.style.display = 'none';
-                button.textContent = 'Show Details';
+                button.innerHTML = '<i class="fas fa-info-circle me-1"></i> Show Details';
             }
         }
 
@@ -328,4 +676,4 @@
         fetchRecentImages();
     </script>
 </body>
-</html>
+</html> 

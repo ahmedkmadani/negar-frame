@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AI Results WebSocket Test</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://sdk.amazonaws.com/js/aws-sdk-2.1048.0.min.js"></script>
+    <style>
+        .result-card {
+            margin-bottom: 15px;
+            transition: all 0.3s ease;
+        }
+        .result-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .status-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+        }
+        .connection-info {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+        .debug-panel {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 300px;
+            max-height: 400px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+        }
+        .image-container {
+            position: relative;
+            margin-bottom: 15px;
+        }
+        .image-container img {
+            max-width: 100%;
+            height: auto;
+        }
+        .nav-tabs {
+            margin-bottom: 20px;
+        }
+        .tab-content {
+            padding-top: 20px;
+        }
+        .loading-spinner {
+            display: inline-block;
+            width: 2rem;
+            height: 2rem;
+            vertical-align: text-bottom;
+            border: 0.25em solid currentColor;
+            border-right-color: transparent;
+            border-radius: 50%;
+            animation: spinner-border .75s linear infinite;
+        }
+        @keyframes spinner-border {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <div class="container py-4">
+        <h2 class="mb-4">AI Results Monitor</h2>
+        
+        <ul class="nav nav-tabs" id="myTab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="live-tab" data-bs-toggle="tab" data-bs-target="#live" type="button" role="tab" aria-controls="live" aria-selected="true">Live Results</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="recent-tab" data-bs-toggle="tab" data-bs-target="#recent" type="button" role="tab" aria-controls="recent" aria-selected="false">Recent Images</button>
+            </li>
+        </ul>
+        
+        <div class="tab-content" id="myTabContent">
+            <!-- Live Results Tab -->
+            <div class="tab-pane fade show active" id="live" role="tabpanel" aria-labelledby="live-tab">
+                <div id="status" class="alert alert-info">Connecting...</div>
+                <div id="results" class="row"></div>
+            </div>
+            
+            <!-- Recent Images Tab -->
+            <div class="tab-pane fade" id="recent" role="tabpanel" aria-labelledby="recent-tab">
+                <div id="recentStatus" class="alert alert-info">
+                    <div class="loading-spinner"></div> Loading recent images...
+                </div>
+                <div id="recentImages" class="row"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="connectionInfo" class="connection-info alert alert-secondary">
+        <small>Monitoring connection...</small>
+    </div>
+
+    <div id="debugPanel" class="debug-panel card">
+        <div class="card-body">
+            <h6 class="card-title">Debug Log</h6>
+            <div id="debugLog" class="small"></div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const resultsDiv = document.getElementById('results');
+        const statusDiv = document.getElementById('status');
+        const connectionInfo = document.getElementById('connectionInfo');
+        const debugPanel = document.getElementById('debugPanel');
+        const debugLog = document.getElementById('debugLog');
+        const recentImagesDiv = document.getElementById('recentImages');
+        const recentStatusDiv = document.getElementById('recentStatus');
+        let reconnectAttempts = 0;
+        let lastHeartbeat = Date.now();
+
+        // Fetch recent images when the Recent Images tab is clicked
+        document.getElementById('recent-tab').addEventListener('click', fetchRecentImages);
+
+        // Function to fetch recent images from the API
+        async function fetchRecentImages() {
+            recentStatusDiv.innerHTML = '<div class="loading-spinner"></div> Loading recent images...';
+            recentImagesDiv.innerHTML = '';
+            
+            try {
+                const response = await fetch('https://frame.leamech.com/images');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                logDebug('Received recent images:', data);
+                
+                if (data.status === 'success' && data.images && data.images.length > 0) {
+                    recentStatusDiv.className = 'alert alert-success';
+                    recentStatusDiv.innerHTML = `<strong>Found ${data.count} recent images</strong>`;
+                    
+                    // Display the images
+                    data.images.forEach(image => {
+                        const imageElement = document.createElement('div');
+                        imageElement.className = 'col-md-6 col-lg-4';
+                        imageElement.innerHTML = `
+                            <div class="card result-card">
+                                <div class="card-body">
+                                    <h5 class="card-title">${image.filename}</h5>
+                                    <p class="card-text">
+                                        <small class="text-muted">
+                                            Size: ${formatFileSize(image.size)}<br>
+                                            Last Modified: ${formatDate(image.last_modified)}
+                                        </small>
+                                    </p>
+                                    <div class="image-container">
+                                        <img src="${image.url}" class="mb-2" alt="${image.filename}">
+                                    </div>
+                                    <a href="${image.url}" class="btn btn-sm btn-primary" target="_blank">
+                                        View Full Size
+                                    </a>
+                                </div>
+                            </div>
+                        `;
+                        recentImagesDiv.appendChild(imageElement);
+                    });
+                } else {
+                    recentStatusDiv.className = 'alert alert-warning';
+                    recentStatusDiv.innerHTML = '<strong>No recent images found</strong>';
+                }
+            } catch (error) {
+                logDebug('Error fetching recent images:', error);
+                recentStatusDiv.className = 'alert alert-danger';
+                recentStatusDiv.innerHTML = `<strong>Error loading images:</strong> ${error.message}`;
+            }
+        }
+
+        // Helper function to format file size
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' bytes';
+            else if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+            else return (bytes / 1048576).toFixed(1) + ' MB';
+        }
+
+        // Helper function to format date
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleString();
+        }
+
+        function connectWebSocket() {
+            const ws = new WebSocket('wss://frame.leamech.com/ws/ai_results');
+            
+            ws.onopen = () => {
+                statusDiv.className = 'alert alert-success';
+                statusDiv.innerHTML = '<strong>Connected to WebSocket</strong>';
+                reconnectAttempts = 0;
+                updateConnectionInfo('Connected');
+            };
+            
+            ws.onmessage = async (event) => {
+                const data = JSON.parse(event.data);
+                logDebug('Received:', data);
+                
+                if (data.type === 'heartbeat') {
+                    lastHeartbeat = Date.now();
+                    updateConnectionInfo(`Last heartbeat: ${new Date(data.timestamp).toLocaleTimeString()}`);
+                    return;
+                }
+
+                if (data.type === 'connection_status') {
+                    updateConnectionInfo(`Client ID: ${data.client_id}`);
+                    return;
+                }
+                
+                const resultElement = document.createElement('div');
+                resultElement.className = 'col-md-6 col-lg-4';
+                
+                if (data.status === 'success') {
+                    resultElement.innerHTML = `
+                        <div class="card result-card">
+                            <div class="card-body">
+                                <span class="badge bg-success status-badge">Success</span>
+                                <h5 class="card-title">${data.original_filename}</h5>
+                                <p class="card-text">
+                                    <small class="text-muted">
+                                        Processing Time: ${data.processing_time.toFixed(2)}s<br>
+                                        Persons Detected: ${data.detections.total_persons}
+                                    </small>
+                                </p>
+                                <div class="image-container">
+                                    <img src="${data.processed_url}" class="mb-2" alt="Processed Image">
+                                </div>
+                                <button class="btn btn-sm btn-primary" onclick="toggleDetails(this)">
+                                    Show Details
+                                </button>
+                                <div class="detection-details mt-2" style="display: none;">
+                                    <pre class="small">${JSON.stringify(data.detections, null, 2)}</pre>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    resultElement.innerHTML = `
+                        <div class="card result-card border-danger">
+                            <div class="card-body">
+                                <span class="badge bg-danger status-badge">Error</span>
+                                <h5 class="card-title">${data.filename}</h5>
+                                <p class="card-text text-danger">${data.error}</p>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                resultsDiv.insertBefore(resultElement, resultsDiv.firstChild);
+            };
+            
+            ws.onclose = (event) => {
+                statusDiv.className = 'alert alert-warning';
+                statusDiv.innerHTML = `<strong>Disconnected</strong> (Code: ${event.code})`;
+                updateConnectionInfo('Disconnected');
+                
+                // Exponential backoff for reconnection
+                const delay = Math.min(30000, Math.pow(1.5, reconnectAttempts) * 1000);
+                logDebug(`WebSocket closed. Reconnecting in ${delay/1000}s...`);
+                
+                reconnectAttempts++;
+                
+                setTimeout(() => {
+                    logDebug(`Attempting to reconnect (attempt ${reconnectAttempts})...`);
+                    connectWebSocket();
+                }, delay);
+            };
+
+            ws.onerror = (error) => {
+                logDebug('WebSocket error:', error);
+                statusDiv.className = 'alert alert-danger';
+                statusDiv.innerHTML = '<strong>Connection Error</strong>';
+            };
+
+            // Monitor connection health
+            setInterval(() => {
+                const now = Date.now();
+                if (now - lastHeartbeat > 45000) {  // No heartbeat for 45 seconds
+                    logDebug('Connection appears to be dead, reconnecting...');
+                    ws.close();
+                }
+            }, 5000);
+        }
+
+        function updateConnectionInfo(status) {
+            connectionInfo.innerHTML = `
+                <strong>Status:</strong> ${status}<br>
+                <small>Last updated: ${new Date().toLocaleTimeString()}</small>
+            `;
+        }
+
+        function toggleDetails(button) {
+            const details = button.nextElementSibling;
+            if (details.style.display === 'none') {
+                details.style.display = 'block';
+                button.textContent = 'Hide Details';
+            } else {
+                details.style.display = 'none';
+                button.textContent = 'Show Details';
+            }
+        }
+
+        function logDebug(message, data = null) {
+            const timestamp = new Date().toISOString();
+            const logMessage = data ? 
+                `${timestamp}: ${message} ${JSON.stringify(data)}` :
+                `${timestamp}: ${message}`;
+            
+            debugLog.innerHTML = `<div>${logMessage}</div>${debugLog.innerHTML}`;
+            console.log(message, data);
+        }
+
+        // Toggle debug panel with keyboard shortcut
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.key === 'd') {
+                debugPanel.style.display = debugPanel.style.display === 'none' ? 'block' : 'none';
+            }
+        });
+
+        // Start connection
+        connectWebSocket();
+        
+        // Fetch recent images on page load
+        fetchRecentImages();
+    </script>
+</body>
+</html>
