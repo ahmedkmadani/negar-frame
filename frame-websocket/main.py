@@ -44,12 +44,12 @@ settings = Settings()
 
 # Add MinIO configuration
 class MinioSettings:
-    MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "minio:9000")
+    MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "minio-dev.leamech.com")
     MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY", "negar-dev")
     MINIO_SECRET_KEY = os.getenv("MINIO_SECRET_KEY", "negar-dev")
     MINIO_BUCKET_PROCESSED = "yolo-images"
     MINIO_BUCKET_PROCESSED_TEST = "yolo-images-test"    
-    MINIO_SECURE = False
+    MINIO_SECURE = True
 
 minio_settings = MinioSettings()
 
@@ -211,15 +211,15 @@ def get_images():
         recent_images = objects[:5]
         
         # Generate URLs for each image
-        base_url = f"http://{minio_settings.MINIO_ENDPOINT}{minio_settings.MINIO_PATH_PREFIX}"
+        base_url = f"http://{minio_settings.MINIO_ENDPOINT}"
         if minio_settings.MINIO_SECURE:
-            base_url = f"https://{minio_settings.MINIO_ENDPOINT}{minio_settings.MINIO_PATH_PREFIX}"
+            base_url = f"https://{minio_settings.MINIO_ENDPOINT}"
             
         image_data = []
         for obj in recent_images:
             # Generate presigned URL (valid for 1 hour)
             url = minio_client.presigned_get_object(
-                minio_settings.MINIO_BUCKET_PROCESSED,
+                minio_settings.MINIO_BUCKET_PROCESSED_TEST,
                 obj.object_name,
                 expires=timedelta(hours=1)
             )

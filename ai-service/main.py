@@ -73,9 +73,29 @@ ensure_bucket_exists(MINIO_BUCKET_PROCESSED)
 ensure_bucket_exists(MINIO_BUCKET_PROCESSED_TEST)
 
 # Update the URL generation function
-def get_minio_url(bucket, filename):
-    """Generate a URL for a MinIO object"""
-    return f"https://{MINIO_ENDPOINT}/{bucket}/{filename}"
+def get_minio_url(bucket, filename, expiry=timedelta(hours=1)):
+    """Generate a URL for a MinIO object
+    
+    Args:
+        bucket: The MinIO bucket name
+        filename: The object name/path in the bucket
+        expiry: Expiration time for presigned URLs (default: 1 hour)
+    
+    Returns:
+        A URL to access the object - presigned if needed for non-public buckets
+    """
+    try:
+        # Try to generate a presigned URL (works for both public and private buckets)
+        url = minio_client.presigned_get_object(
+            bucket_name=bucket,
+            object_name=filename,
+            expires=expiry.total_seconds()
+        )
+        return url
+    except Exception as e:
+        logger.warning(f"Failed to generate presigned URL: {e}")
+        # Fallback to direct URL (only works for public buckets)
+        return f"https://{MINIO_ENDPOINT}/{bucket}/{filename}"
 
 def process_image(image_data):
 
@@ -327,7 +347,7 @@ def test_process_images():
                 
                 # Upload processed image
                 processed_filename = f"test_processed_{filename}"
-                original_url = get_minio_url(MINIO_BUCKET_PROCESSED, filename)
+                original_url = get_minio_url(MINIO_BUCKET, filename)
                 processed_url = get_minio_url(MINIO_BUCKET_PROCESSED_TEST, processed_filename)
                 minio_client.put_object(
                     MINIO_BUCKET_PROCESSED_TEST,
@@ -337,11 +357,14 @@ def test_process_images():
                     content_type='image/png'
                 )
                 
+                logger.info(f"Original image: {original_url}")
+                logger.info(f"Processed image: {processed_url}")
+                
                 
                 # Publish results
                 result_data = {
                     'original_filename': filename,
-                    'original_bucket': MINIO_BUCKET_PROCESSED,
+                    'original_bucket': MINIO_BUCKET,
                     'processed_filename': processed_filename,
                     'processed_bucket': MINIO_BUCKET_PROCESSED_TEST,
                     'status': 'success',
