@@ -75,7 +75,7 @@ ensure_bucket_exists(MINIO_BUCKET_PROCESSED_TEST)
 # Update the URL generation function
 def get_minio_url(bucket, filename):
     """Generate a URL for a MinIO object"""
-    return f"http://localhost:9000/{bucket}/{filename}"
+    return f"https://{MINIO_ENDPOINT}/{bucket}/{filename}"
 
 def process_image(image_data):
 
