@@ -39,7 +39,7 @@ minio_client = Minio(
     MINIO_ENDPOINT,
     access_key=MINIO_ACCESS_KEY,
     secret_key=MINIO_SECRET_KEY,
-    secure=True  # Use False for local development
+    secure=False  # Use False for local development
 )
 
 # Ensure buckets exist and have proper permissions
