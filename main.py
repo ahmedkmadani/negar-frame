@@ -39,9 +39,9 @@ socketio = SocketIO(
 )
 
 # MinIO configuration
-MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "minio:9000")
-MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY", "minioadmin")
-MINIO_SECRET_KEY = os.getenv("MINIO_SECRET_KEY", "minioadmin")
+MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "minio:9000")  # Use the Docker service name
+MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY", "negar-dev")  # Use the root credentials from docker-compose
+MINIO_SECRET_KEY = os.getenv("MINIO_SECRET_KEY", "negar-dev")  # Use the root credentials from docker-compose
 MINIO_BUCKET = "frames"
 
 logger.info(f"Connecting to MinIO at {MINIO_ENDPOINT}")
@@ -54,6 +54,11 @@ try:
         secret_key=MINIO_SECRET_KEY,
         secure=False  # Set to True if using HTTPS
     )
+    logger.info(f"MinIO client initialized successfully: {minio_client}")
+    logger.info(f"MinIO client initialized successfully: {minio_client.bucket_exists(MINIO_BUCKET)}")
+    logger.info(f"MinIO access key: {MINIO_ACCESS_KEY}")
+    logger.info(f"MinIO endpoint: {MINIO_ENDPOINT}")
+    logger.info(f"MinIO secret key: {MINIO_SECRET_KEY}")
     logger.info("MinIO client initialized successfully")
 except Exception as e:
     logger.error(f"Failed to initialize MinIO client: {e}")

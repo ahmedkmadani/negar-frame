@@ -76,7 +76,7 @@
         let lastHeartbeat = Date.now();
 
         const s3Client = new AWS.S3({
-            endpoint: 'http://localhost:9000',
+            endpoint: 'http://minio-dev.leamech.com',
             accessKeyId: 'negar-dev',
             secretAccessKey: 'negar-dev',
             s3ForcePathStyle: true,
@@ -99,7 +99,7 @@
         }
 
         function connectWebSocket() {
-            const ws = new WebSocket('ws://localhost:5004/ws/ai_results');
+            const ws = new WebSocket('wss://frame.leamech.com/ws/ai_results');
             
             ws.onopen = () => {
                 statusDiv.className = 'alert alert-success';
@@ -240,4 +240,4 @@
         connectWebSocket();
     </script>
 </body>
-</html> 
+</html>

@@ -6,7 +6,9 @@ import json
 import logging
 import os
 from typing import List, Dict
-from datetime import datetime
+from datetime import datetime, timedelta
+from minio import Minio
+from fastapi.responses import JSONResponse
 
 # Configure logging
 logging.basicConfig(
@@ -39,6 +41,25 @@ class Settings:
     HEARTBEAT_INTERVAL = 30  # seconds
 
 settings = Settings()
+
+# Add MinIO configuration
+class MinioSettings:
+    MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "minio:9000")
+    MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY", "negar-dev")
+    MINIO_SECRET_KEY = os.getenv("MINIO_SECRET_KEY", "negar-dev")
+    MINIO_BUCKET_PROCESSED = "yolo-images"
+    MINIO_BUCKET_PROCESSED_TEST = "yolo-images-test"    
+    MINIO_SECURE = False
+
+minio_settings = MinioSettings()
+
+# Initialize MinIO client
+minio_client = Minio(
+    minio_settings.MINIO_ENDPOINT,
+    access_key=minio_settings.MINIO_ACCESS_KEY,
+    secret_key=minio_settings.MINIO_SECRET_KEY,
+    secure=minio_settings.MINIO_SECURE
+)
 
 class ConnectionManager:
     def __init__(self):
@@ -173,6 +194,58 @@ async def websocket_endpoint(websocket: WebSocket):
                 logger.error(f"Error handling message from client {client_id}: {e}")
     finally:
         manager.disconnect(client_id)
+
+@app.get("/images")
+def get_images():
+    try:
+        # List objects in the bucket
+        objects = list(minio_client.list_objects(
+            minio_settings.MINIO_BUCKET_PROCESSED_TEST,
+            recursive=True
+        ))
+        
+        # Sort objects by last modified time (newest first)
+        objects.sort(key=lambda obj: obj.last_modified, reverse=True)
+        
+        # Get the 5 most recent images
+        recent_images = objects[:5]
+        
+        # Generate URLs for each image
+        base_url = f"http://{minio_settings.MINIO_ENDPOINT}{minio_settings.MINIO_PATH_PREFIX}"
+        if minio_settings.MINIO_SECURE:
+            base_url = f"https://{minio_settings.MINIO_ENDPOINT}{minio_settings.MINIO_PATH_PREFIX}"
+            
+        image_data = []
+        for obj in recent_images:
+            # Generate presigned URL (valid for 1 hour)
+            url = minio_client.presigned_get_object(
+                minio_settings.MINIO_BUCKET_PROCESSED,
+                obj.object_name,
+                expires=timedelta(hours=1)
+            )
+            
+            image_data.append({
+                "filename": obj.object_name,
+                "size": obj.size,
+                "last_modified": obj.last_modified.isoformat(),
+                "url": url
+            })
+        
+        return {
+            "status": "success",
+            "count": len(image_data),
+            "images": image_data
+        }
+    
+    except Exception as e:
+        logger.error(f"Error retrieving images: {e}")
+        return JSONResponse(
+            status_code=500,
+            content={
+                "status": "error",
+                "message": str(e)
+            }
+        )
 
 @app.get("/health")
 async def health_check():

@@ -24,10 +24,11 @@ model = YOLO(MODEL_PATH).to('cpu') # Use yolov8n (nano) for faster CPU inference
 
 # MinIO configuration
 MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "minio:9000")
-MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY", "minioadmin")
-MINIO_SECRET_KEY = os.getenv("MINIO_SECRET_KEY", "minioadmin")
+MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY", "negar-dev")
+MINIO_SECRET_KEY = os.getenv("MINIO_SECRET_KEY", "negar-dev")
 MINIO_BUCKET = "frames"
 MINIO_BUCKET_PROCESSED = "yolo-images"
+MINIO_BUCKET_PROCESSED_TEST = "yolo-images-test"
 
 REDIS_HOST = os.getenv('REDIS_HOST', '34.55.93.180')
 REDIS_PORT = int(os.getenv('REDIS_PORT', 6379))
@@ -38,9 +39,43 @@ minio_client = Minio(
     MINIO_ENDPOINT,
     access_key=MINIO_ACCESS_KEY,
     secret_key=MINIO_SECRET_KEY,
-    secure=False
+    secure=False  # Use False for local development
 )
 
+# Ensure buckets exist and have proper permissions
+def ensure_bucket_exists(bucket_name):
+    """Create bucket if it doesn't exist and set public read access"""
+    try:
+        if not minio_client.bucket_exists(bucket_name):
+            minio_client.make_bucket(bucket_name)
+            logger.info(f"Created bucket: {bucket_name}")
+        
+        # Set public read policy
+        policy = {
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Effect": "Allow",
+                    "Principal": {"AWS": "*"},
+                    "Action": ["s3:GetObject"],
+                    "Resource": [f"arn:aws:s3:::{bucket_name}/*"]
+                }
+            ]
+        }
+        minio_client.set_bucket_policy(bucket_name, json.dumps(policy))
+        logger.info(f"Set public read policy for bucket: {bucket_name}")
+    except Exception as e:
+        logger.error(f"Error setting up bucket {bucket_name}: {e}")
+
+# Ensure all required buckets exist
+ensure_bucket_exists(MINIO_BUCKET)
+ensure_bucket_exists(MINIO_BUCKET_PROCESSED)
+ensure_bucket_exists(MINIO_BUCKET_PROCESSED_TEST)
+
+# Update the URL generation function
+def get_minio_url(bucket, filename):
+    """Generate a URL for a MinIO object"""
+    return f"http://localhost:9000/{bucket}/{filename}"
 
 def process_image(image_data):
 
@@ -206,6 +241,8 @@ def main():
                         
                         # Upload processed image to the new bucket
                         processed_filename = f"processed_{filename}"
+                        original_url = get_minio_url(bucket, filename)
+                        processed_url = get_minio_url(MINIO_BUCKET_PROCESSED, processed_filename)
                         minio_client.put_object(
                             MINIO_BUCKET_PROCESSED,
                             processed_filename,
@@ -253,7 +290,7 @@ def main():
 
 def test_process_images():
     """Test function to process all images in yolo-images bucket"""
-    logger.info("Starting test: Processing all images in yolo-images bucket")
+    logger.info("Starting test: Processing all images in frames bucket")
     
     try:
         # Initialize Redis
@@ -267,9 +304,13 @@ def test_process_images():
         )
         
         # List all objects in yolo-images bucket
-        objects = list(minio_client.list_objects(MINIO_BUCKET))
-        total_images = len(objects)
-        logger.info(f"Found {total_images} images to process")
+        try:    
+            objects = list(minio_client.list_objects(MINIO_BUCKET))
+            total_images = len(objects)
+            logger.info(f"Found {total_images} images to process")
+        except Exception as e:
+            logger.error(f"Error listing objects: {e}", exc_info=True)
+            return
         
         for idx, obj in enumerate(objects, 1):
             try:
@@ -286,8 +327,10 @@ def test_process_images():
                 
                 # Upload processed image
                 processed_filename = f"test_processed_{filename}"
+                original_url = get_minio_url(MINIO_BUCKET_PROCESSED, filename)
+                processed_url = get_minio_url(MINIO_BUCKET_PROCESSED_TEST, processed_filename)
                 minio_client.put_object(
-                    MINIO_BUCKET_PROCESSED,
+                    MINIO_BUCKET_PROCESSED_TEST,
                     processed_filename,
                     processed_image,
                     processed_image.getbuffer().nbytes,
@@ -300,7 +343,7 @@ def test_process_images():
                     'original_filename': filename,
                     'original_bucket': MINIO_BUCKET_PROCESSED,
                     'processed_filename': processed_filename,
-                    'processed_bucket': MINIO_BUCKET_PROCESSED,
+                    'processed_bucket': MINIO_BUCKET_PROCESSED_TEST,
                     'status': 'success',
                     'processing_time': processing_time,
                     'detections': {

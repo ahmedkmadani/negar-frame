@@ -30,4 +30,4 @@ ENV CUDA_VISIBLE_DEVICES=""
 ENV FORCE_CPU=1
 
 # Run the application
-CMD ["python", "main.py"]
+CMD ["python", "main.py", "test"]
