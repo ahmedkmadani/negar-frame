@@ -53,46 +53,16 @@ class MinioSettings:
     MINIO_SECRET_KEY = os.getenv("MINIO_SECRET_KEY", "negar-dev")
     MINIO_BUCKET_PROCESSED = "yolo-images"
     MINIO_BUCKET_PROCESSED_TEST = "yolo-images-test"    
-    MINIO_SECURE = False
+    MINIO_SECURE = True
 
 minio_settings = MinioSettings()
 
-# Initialize MinIO client
 minio_client = Minio(
     minio_settings.MINIO_ENDPOINT,
     access_key=minio_settings.MINIO_ACCESS_KEY,
     secret_key=minio_settings.MINIO_SECRET_KEY,
     secure=minio_settings.MINIO_SECURE
 )
-
-def ensure_bucket_exists(bucket_name):
-    """Create bucket if it doesn't exist and set public read access"""
-    try:
-        if not minio_client.bucket_exists(bucket_name):
-            minio_client.make_bucket(bucket_name)
-            logger.info(f"Created bucket: {bucket_name}")
-        
-        # Set public read policy
-        policy = {
-            "Version": "2012-10-17",
-            "Statement": [
-                {
-                    "Effect": "Allow",
-                    "Principal": {"AWS": "*"},
-                    "Action": ["s3:GetObject"],
-                    "Resource": [f"arn:aws:s3:::{bucket_name}/*"]
-                }
-            ]
-        }
-        minio_client.set_bucket_policy(bucket_name, json.dumps(policy))
-        logger.info(f"Set public read policy for bucket: {bucket_name}")
-    except Exception as e:
-        logger.error(f"Error setting up bucket {bucket_name}: {e}")
-
-# Ensure all required buckets exist
-ensure_bucket_exists(MINIO_BUCKET)
-ensure_bucket_exists(MINIO_BUCKET_PROCESSED)
-ensure_bucket_exists(MINIO_BUCKET_PROCESSED_TEST)
 
 class ConnectionManager:
     def __init__(self):
@@ -243,11 +213,6 @@ def get_images():
         # Get the 5 most recent images
         recent_images = objects[:5]
         
-        # Generate URLs for each image
-        base_url = f"http://{minio_settings.MINIO_ENDPOINT}"
-        if minio_settings.MINIO_SECURE:
-            base_url = f"https://{minio_settings.MINIO_ENDPOINT}"
-            
         image_data = []
         for obj in recent_images:
             # Generate presigned URL (valid for 1 hour)
