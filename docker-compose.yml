@@ -1,5 +1,25 @@
 version: '3'
 services:
+
+  frame-app:
+    build: .
+    ports:
+      - "5003:5003"  # Host:Container
+    environment:
+      - MINIO_ENDPOINT=minio-dev.leamech.com
+      - MINIO_ACCESS_KEY=negar-dev
+      - MINIO_SECRET_KEY=negar-dev
+      - REDIS_HOST=34.55.93.180
+      - REDIS_PORT=6379
+    volumes:
+      - ./:/app  # Mount current directory to /app in container
+      - /app/__pycache__  # Prevent __pycache__ from being created on host
+      - /app/.pytest_cache  # Prevent test cache from being created on host
+    depends_on:
+      - minio
+    networks:
+      - app-network
+      
   minio:
     image: minio/minio:latest
     ports:
