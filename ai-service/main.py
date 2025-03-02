@@ -318,15 +318,15 @@ def main():
             retry_on_timeout=True
         )
         pubsub = r.pubsub()
-        pubsub.subscribe('frame_sync')
-        logger.info("Successfully subscribed to frame_sync")
+        pubsub.subscribe('ai_channel')
+        logger.info("Successfully subscribed to ai_channel")
         
         while True:
             try:
                 message = pubsub.get_message(timeout=1.0)
                 if message and message['type'] == 'message':
                     data = eval(message['data'].decode('utf-8'))
-                    logger.info(f"Received message from frame_sync: {data}")
+                    logger.info(f"Received message from ai_channel: {data}")
                     
                     bucket = data['bucket']
                     filename = data['filename']
