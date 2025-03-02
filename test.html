@@ -4,56 +4,101 @@
     <title>Leamech AI Vision Monitor</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         :root {
-            --primary-color: #2c3e50;
-            --secondary-color: #3498db;
-            --accent-color: #1abc9c;
-            --light-color: #ecf0f1;
-            --dark-color: #2c3e50;
-            --danger-color: #e74c3c;
-            --success-color: #2ecc71;
-            --warning-color: #f39c12;
+            --primary-color: #3f51b5;
+            --primary-light: #757de8;
+            --primary-dark: #002984;
+            --secondary-color: #00bcd4;
+            --accent-color: #ff4081;
+            --light-color: #f5f5f5;
+            --dark-color: #212121;
+            --danger-color: #f44336;
+            --success-color: #4caf50;
+            --warning-color: #ff9800;
+            --surface-color: #ffffff;
+            --background-color: #fafafa;
+            --elevation-1: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+            --elevation-2: 0 3px 6px rgba(0,0,0,0.16), 0 3px 6px rgba(0,0,0,0.23);
+            --elevation-3: 0 10px 20px rgba(0,0,0,0.19), 0 6px 6px rgba(0,0,0,0.23);
+            --transition: all 0.3s cubic-bezier(.25,.8,.25,1);
         }
         
         body {
-            font-family: 'Lato', sans-serif;
-            background-color: #f8f9fa;
+            font-family: 'Roboto', sans-serif;
+            background-color: var(--background-color);
             color: var(--dark-color);
             line-height: 1.6;
         }
         
+        .material-icons-round {
+            vertical-align: middle;
+            margin-right: 6px;
+        }
+        
         .navbar-brand {
-            font-weight: 900;
-            letter-spacing: 1px;
+            font-weight: 500;
+            letter-spacing: 0.5px;
             color: var(--primary-color) !important;
+            display: flex;
+            align-items: center;
+        }
+        
+        .navbar-brand .material-icons-round {
+            font-size: 24px;
+            margin-right: 8px;
         }
         
         .navbar {
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            background-color: white;
+            box-shadow: var(--elevation-1);
+            background-color: var(--surface-color);
         }
         
         h1, h2, h3, h4, h5, h6 {
-            font-weight: 700;
-            color: var(--primary-color);
+            font-weight: 500;
+            color: var(--primary-dark);
         }
         
         .page-header {
             padding: 2rem 0;
             text-align: center;
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
             color: white;
             margin-bottom: 2rem;
-            border-radius: 0 0 10px 10px;
+            border-radius: 0 0 16px 16px;
+            box-shadow: var(--elevation-2);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .page-header::after {
+            content: '';
+            position: absolute;
+            bottom: -50px;
+            right: -50px;
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.1);
+        }
+        
+        .page-header::before {
+            content: '';
+            position: absolute;
+            top: -30px;
+            left: -30px;
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.1);
         }
         
         .page-header h2 {
             color: white;
-            font-weight: 900;
+            font-weight: 500;
             letter-spacing: 1px;
         }
         
@@ -66,22 +111,23 @@
         
         .result-card {
             margin-bottom: 25px;
-            transition: all 0.3s ease;
+            transition: var(--transition);
             border: none;
-            border-radius: 10px;
+            border-radius: 12px;
             overflow: hidden;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            box-shadow: var(--elevation-1);
+            background-color: var(--surface-color);
         }
         
         .result-card:hover {
             transform: translateY(-5px);
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            box-shadow: var(--elevation-3);
         }
         
         .card-title {
-            font-weight: 700;
+            font-weight: 500;
             font-size: 1.1rem;
-            color: var(--primary-color);
+            color: var(--primary-dark);
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -91,10 +137,17 @@
             position: absolute;
             top: 15px;
             right: 15px;
-            font-weight: 600;
+            font-weight: 500;
             letter-spacing: 0.5px;
             padding: 0.4rem 0.8rem;
             border-radius: 50px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .status-badge .material-icons-round {
+            font-size: 16px;
+            margin-right: 4px;
         }
         
         .connection-info {
@@ -102,11 +155,16 @@
             bottom: 20px;
             right: 20px;
             z-index: 1000;
-            border-radius: 10px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            border-radius: 12px;
+            box-shadow: var(--elevation-2);
             padding: 15px;
-            background-color: white;
-            border-left: 5px solid var(--secondary-color);
+            background-color: var(--surface-color);
+            border-left: 5px solid var(--primary-color);
+            transition: var(--transition);
+        }
+        
+        .connection-info:hover {
+            box-shadow: var(--elevation-3);
         }
         
         .debug-panel {
@@ -118,8 +176,8 @@
             overflow-y: auto;
             z-index: 1000;
             display: none;
-            border-radius: 10px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+            border-radius: 12px;
+            box-shadow: var(--elevation-3);
         }
         
         .image-container {
@@ -127,7 +185,7 @@
             margin-bottom: 15px;
             border-radius: 8px;
             overflow: hidden;
-            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+            box-shadow: var(--elevation-1);
         }
         
         .image-container img {
@@ -143,31 +201,40 @@
         .nav-tabs {
             margin-bottom: 30px;
             border-bottom: 2px solid var(--light-color);
+            display: flex;
+            justify-content: center;
         }
         
         .nav-tabs .nav-link {
             border: none;
             color: var(--dark-color);
-            font-weight: 600;
+            font-weight: 500;
             padding: 12px 20px;
             border-radius: 0;
             margin-right: 5px;
-            transition: all 0.2s ease;
+            transition: var(--transition);
+            position: relative;
         }
         
         .nav-tabs .nav-link:hover {
-            color: var(--secondary-color);
-            background-color: rgba(52, 152, 219, 0.05);
+            color: var(--primary-color);
+            background-color: rgba(63, 81, 181, 0.05);
         }
         
         .nav-tabs .nav-link.active {
-            color: var(--secondary-color);
-            border-bottom: 3px solid var(--secondary-color);
+            color: var(--primary-color);
             background-color: transparent;
         }
         
-        .tab-content {
-            padding-top: 20px;
+        .nav-tabs .nav-link.active::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background-color: var(--primary-color);
+            border-radius: 3px 3px 0 0;
         }
         
         .loading-spinner {
@@ -175,7 +242,7 @@
             width: 1.5rem;
             height: 1.5rem;
             vertical-align: text-bottom;
-            border: 0.2em solid currentColor;
+            border: 0.2em solid var(--primary-light);
             border-right-color: transparent;
             border-radius: 50%;
             animation: spinner-border .75s linear infinite;
@@ -188,68 +255,83 @@
         .btn {
             border-radius: 50px;
             padding: 0.5rem 1.2rem;
-            font-weight: 600;
+            font-weight: 500;
             letter-spacing: 0.5px;
-            transition: all 0.3s ease;
+            transition: var(--transition);
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .btn .material-icons-round {
+            font-size: 18px;
         }
         
         .btn-primary {
-            background-color: var(--secondary-color);
-            border-color: var(--secondary-color);
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
         }
         
         .btn-primary:hover {
-            background-color: #2980b9;
-            border-color: #2980b9;
+            background-color: var(--primary-dark);
+            border-color: var(--primary-dark);
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.3);
+            box-shadow: var(--elevation-2);
         }
         
         .alert {
-            border-radius: 10px;
+            border-radius: 12px;
             border: none;
-            box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+            box-shadow: var(--elevation-1);
+            display: flex;
+            align-items: center;
+        }
+        
+        .alert .material-icons-round {
+            margin-right: 10px;
+            font-size: 24px;
         }
         
         .alert-success {
-            background-color: rgba(46, 204, 113, 0.1);
+            background-color: rgba(76, 175, 80, 0.1);
             color: var(--success-color);
             border-left: 4px solid var(--success-color);
         }
         
         .alert-info {
-            background-color: rgba(52, 152, 219, 0.1);
-            color: var(--secondary-color);
-            border-left: 4px solid var(--secondary-color);
+            background-color: rgba(63, 81, 181, 0.1);
+            color: var(--primary-color);
+            border-left: 4px solid var(--primary-color);
         }
         
         .alert-warning {
-            background-color: rgba(243, 156, 18, 0.1);
+            background-color: rgba(255, 152, 0, 0.1);
             color: var(--warning-color);
             border-left: 4px solid var(--warning-color);
         }
         
         .alert-danger {
-            background-color: rgba(231, 76, 60, 0.1);
+            background-color: rgba(244, 67, 54, 0.1);
             color: var(--danger-color);
             border-left: 4px solid var(--danger-color);
         }
         
         .detection-details {
-            background-color: #f8f9fa;
+            background-color: var(--light-color);
             border-radius: 8px;
             padding: 15px;
         }
         
         pre {
-            background-color: #f8f9fa;
-            border-radius: 5px;
+            background-color: var(--light-color);
+            border-radius: 8px;
             padding: 10px;
             color: var(--dark-color);
         }
         
         .footer {
-            background-color: white;
+            background-color: var(--surface-color);
             padding: 2rem 0;
             margin-top: 3rem;
             border-top: 1px solid #eee;
@@ -259,35 +341,67 @@
         }
         
         .footer a {
-            color: var(--secondary-color);
+            color: var(--primary-color);
             text-decoration: none;
         }
         
         .stats-card {
-            background-color: white;
-            border-radius: 10px;
-            padding: 20px;
+            background-color: var(--surface-color);
+            border-radius: 16px;
+            padding: 24px;
             margin-bottom: 20px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            box-shadow: var(--elevation-1);
             text-align: center;
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .stats-card:hover {
+            box-shadow: var(--elevation-2);
+            transform: translateY(-3px);
+        }
+        
+        .stats-card::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary-light), var(--primary-color));
         }
         
         .stats-card .icon {
-            font-size: 2rem;
-            color: var(--secondary-color);
+            font-size: 2.5rem;
+            color: var(--primary-color);
             margin-bottom: 10px;
+            opacity: 0.8;
         }
         
         .stats-card .number {
-            font-size: 2rem;
-            font-weight: 900;
-            color: var(--primary-color);
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--primary-dark);
+            line-height: 1.2;
         }
         
         .stats-card .label {
-            font-size: 0.9rem;
+            font-size: 1rem;
             color: #7f8c8d;
             font-weight: 400;
+            margin-top: 5px;
+        }
+        
+        /* Futuristic pulse effect for stats */
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(63, 81, 181, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(63, 81, 181, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(63, 81, 181, 0); }
+        }
+        
+        .pulse {
+            animation: pulse 2s infinite;
         }
     </style>
 </head>
@@ -296,7 +410,7 @@
     <nav class="navbar navbar-expand-lg navbar-light">
         <div class="container">
             <a class="navbar-brand" href="#">
-                <i class="fas fa-eye me-2"></i>LEAMECH
+                <span class="material-icons-round">visibility</span>LEAMECH
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
@@ -304,13 +418,13 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item">
-                        <a class="nav-link active" href="#">Dashboard</a>
+                        <a class="nav-link active" href="#"><span class="material-icons-round">dashboard</span>Dashboard</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="#">Analytics</a>
+                        <a class="nav-link" href="#"><span class="material-icons-round">analytics</span>Analytics</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="#">Settings</a>
+                        <a class="nav-link" href="#"><span class="material-icons-round">settings</span>Settings</a>
                     </li>
                 </ul>
             </div>
@@ -320,7 +434,7 @@
     <!-- Header -->
     <header class="page-header">
         <div class="container">
-            <h2>AI Vision Monitor</h2>
+            <h2><span class="material-icons-round">smart_toy</span> AI Vision Monitor</h2>
             <p>Real-time computer vision analytics and monitoring</p>
         </div>
     </header>
@@ -330,28 +444,28 @@
         <div class="row mb-4">
             <div class="col-md-3">
                 <div class="stats-card">
-                    <div class="icon"><i class="fas fa-camera"></i></div>
+                    <div class="icon"><span class="material-icons-round">photo_camera</span></div>
                     <div class="number" id="totalImages">0</div>
                     <div class="label">Total Images</div>
                 </div>
             </div>
             <div class="col-md-3">
-                <div class="stats-card">
-                    <div class="icon"><i class="fas fa-user-check"></i></div>
+                <div class="stats-card pulse">
+                    <div class="icon"><span class="material-icons-round">person_search</span></div>
                     <div class="number" id="totalDetections">0</div>
                     <div class="label">Persons Detected</div>
                 </div>
             </div>
             <div class="col-md-3">
                 <div class="stats-card">
-                    <div class="icon"><i class="fas fa-tachometer-alt"></i></div>
+                    <div class="icon"><span class="material-icons-round">speed</span></div>
                     <div class="number" id="avgProcessingTime">0</div>
                     <div class="label">Avg. Processing Time (s)</div>
                 </div>
             </div>
             <div class="col-md-3">
                 <div class="stats-card">
-                    <div class="icon"><i class="fas fa-check-circle"></i></div>
+                    <div class="icon"><span class="material-icons-round">check_circle</span></div>
                     <div class="number" id="successRate">0%</div>
                     <div class="label">Success Rate</div>
                 </div>
@@ -362,12 +476,12 @@
         <ul class="nav nav-tabs" id="myTab" role="tablist">
             <li class="nav-item" role="presentation">
                 <button class="nav-link active" id="live-tab" data-bs-toggle="tab" data-bs-target="#live" type="button" role="tab" aria-controls="live" aria-selected="true">
-                    <i class="fas fa-satellite-dish me-2"></i>Live Results
+                    <span class="material-icons-round">stream</span>Live Results
                 </button>
             </li>
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="recent-tab" data-bs-toggle="tab" data-bs-target="#recent" type="button" role="tab" aria-controls="recent" aria-selected="false">
-                    <i class="fas fa-history me-2"></i>Recent Images
+                    <span class="material-icons-round">history</span>Recent Images
                 </button>
             </li>
         </ul>
@@ -376,7 +490,7 @@
             <!-- Live Results Tab -->
             <div class="tab-pane fade show active" id="live" role="tabpanel" aria-labelledby="live-tab">
                 <div id="status" class="alert alert-info">
-                    <i class="fas fa-sync-alt fa-spin me-2"></i>Connecting to WebSocket...
+                    <span class="material-icons-round">sync</span>Connecting to WebSocket...
                 </div>
                 <div id="results" class="row"></div>
             </div>
@@ -384,7 +498,7 @@
             <!-- Recent Images Tab -->
             <div class="tab-pane fade" id="recent" role="tabpanel" aria-labelledby="recent-tab">
                 <div id="recentStatus" class="alert alert-info">
-                    <i class="fas fa-sync-alt fa-spin me-2"></i>Loading recent images...
+                    <span class="material-icons-round">sync</span>Loading recent images...
                 </div>
                 <div id="recentImages" class="row"></div>
             </div>
@@ -392,12 +506,12 @@
     </div>
 
     <div id="connectionInfo" class="connection-info">
-        <small><i class="fas fa-signal me-2"></i>Monitoring connection...</small>
+        <span class="material-icons-round">sensors</span><small>Monitoring connection...</small>
     </div>
 
     <div id="debugPanel" class="debug-panel card">
         <div class="card-body">
-            <h6 class="card-title"><i class="fas fa-bug me-2"></i>Debug Log</h6>
+            <h6 class="card-title"><span class="material-icons-round">bug_report</span>Debug Log</h6>
             <div id="debugLog" class="small"></div>
         </div>
     </div>
@@ -451,7 +565,7 @@
 
         // Function to fetch recent images from the API
         async function fetchRecentImages() {
-            recentStatusDiv.innerHTML = '<i class="fas fa-sync-alt fa-spin me-2"></i>Loading recent images...';
+            recentStatusDiv.innerHTML = '<span class="material-icons-round">sync</span>Loading recent images...';
             recentImagesDiv.innerHTML = '';
             
             try {
@@ -465,7 +579,7 @@
                 
                 if (data.status === 'success' && data.images && data.images.length > 0) {
                     recentStatusDiv.className = 'alert alert-success';
-                    recentStatusDiv.innerHTML = `<i class="fas fa-check-circle me-2"></i>Found ${data.count} recent images`;
+                    recentStatusDiv.innerHTML = `<span class="material-icons-round">check_circle</span>Found ${data.count} recent images`;
                     
                     // Display the images
                     data.images.forEach(image => {
@@ -477,15 +591,15 @@
                                     <h5 class="card-title">${image.filename}</h5>
                                     <p class="card-text">
                                         <small class="text-muted">
-                                            <i class="fas fa-file me-1"></i> ${formatFileSize(image.size)}<br>
-                                            <i class="fas fa-clock me-1"></i> ${formatDate(image.last_modified)}
+                                            <span class="material-icons-round" style="font-size: 16px;">description</span> ${formatFileSize(image.size)}<br>
+                                            <span class="material-icons-round" style="font-size: 16px;">schedule</span> ${formatDate(image.last_modified)}
                                         </small>
                                     </p>
                                     <div class="image-container">
                                         <img src="${image.url}" class="mb-2" alt="${image.filename}">
                                     </div>
                                     <a href="${image.url}" class="btn btn-primary btn-sm" target="_blank">
-                                        <i class="fas fa-external-link-alt me-1"></i> View Full Size
+                                        <span class="material-icons-round">open_in_new</span> View Full Size
                                     </a>
                                 </div>
                             </div>
@@ -498,12 +612,12 @@
                     updateStatsDisplay();
                 } else {
                     recentStatusDiv.className = 'alert alert-warning';
-                    recentStatusDiv.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i>No recent images found';
+                    recentStatusDiv.innerHTML = '<span class="material-icons-round">warning</span>No recent images found';
                 }
             } catch (error) {
                 logDebug('Error fetching recent images:', error);
                 recentStatusDiv.className = 'alert alert-danger';
-                recentStatusDiv.innerHTML = `<i class="fas fa-times-circle me-2"></i>Error loading images: ${error.message}`;
+                recentStatusDiv.innerHTML = `<span class="material-icons-round">error</span>Error loading images: ${error.message}`;
             }
         }
 
@@ -525,7 +639,7 @@
             
             ws.onopen = () => {
                 statusDiv.className = 'alert alert-success';
-                statusDiv.innerHTML = '<i class="fas fa-check-circle me-2"></i>Connected to WebSocket';
+                statusDiv.innerHTML = '<span class="material-icons-round">check_circle</span>Connected to WebSocket';
                 reconnectAttempts = 0;
                 updateConnectionInfo('Connected');
             };
@@ -559,19 +673,19 @@
                     resultElement.innerHTML = `
                         <div class="card result-card">
                             <div class="card-body">
-                                <span class="badge bg-success status-badge">Success</span>
+                                <span class="badge bg-success status-badge"><span class="material-icons-round">check_circle</span>Success</span>
                                 <h5 class="card-title">${data.original_filename}</h5>
                                 <p class="card-text">
                                     <small class="text-muted">
-                                        <i class="fas fa-stopwatch me-1"></i> ${data.processing_time.toFixed(2)}s<br>
-                                        <i class="fas fa-user me-1"></i> ${data.detections.total_persons} persons
+                                        <span class="material-icons-round" style="font-size: 16px;">timer</span> ${data.processing_time.toFixed(2)}s<br>
+                                        <span class="material-icons-round" style="font-size: 16px;">person</span> ${data.detections.total_persons} persons
                                     </small>
                                 </p>
                                 <div class="image-container">
                                     <img src="${data.processed_url}" class="mb-2" alt="Processed Image">
                                 </div>
                                 <button class="btn btn-primary btn-sm" onclick="toggleDetails(this)">
-                                    <i class="fas fa-info-circle me-1"></i> Show Details
+                                    <span class="material-icons-round">info</span> Show Details
                                 </button>
                                 <div class="detection-details mt-2" style="display: none;">
                                     <pre class="small">${JSON.stringify(data.detections, null, 2)}</pre>
@@ -588,10 +702,10 @@
                     resultElement.innerHTML = `
                         <div class="card result-card">
                             <div class="card-body">
-                                <span class="badge bg-danger status-badge">Error</span>
+                                <span class="badge bg-danger status-badge"><span class="material-icons-round">error</span>Error</span>
                                 <h5 class="card-title">${data.filename}</h5>
                                 <p class="card-text text-danger">
-                                    <i class="fas fa-exclamation-triangle me-1"></i> ${data.error}
+                                    <span class="material-icons-round">warning</span> ${data.error}
                                 </p>
                             </div>
                         </div>
@@ -603,7 +717,7 @@
             
             ws.onclose = (event) => {
                 statusDiv.className = 'alert alert-warning';
-                statusDiv.innerHTML = `<i class="fas fa-exclamation-triangle me-2"></i>Disconnected (Code: ${event.code})`;
+                statusDiv.innerHTML = `<span class="material-icons-round">warning</span>Disconnected (Code: ${event.code})`;
                 updateConnectionInfo('Disconnected');
                 
                 // Exponential backoff for reconnection
@@ -621,7 +735,7 @@
             ws.onerror = (error) => {
                 logDebug('WebSocket error:', error);
                 statusDiv.className = 'alert alert-danger';
-                statusDiv.innerHTML = '<i class="fas fa-times-circle me-2"></i>Connection Error';
+                statusDiv.innerHTML = '<span class="material-icons-round">error</span>Connection Error';
             };
 
             // Monitor connection health
@@ -636,7 +750,7 @@
 
         function updateConnectionInfo(status) {
             connectionInfo.innerHTML = `
-                <strong><i class="fas fa-signal me-2"></i>Status:</strong> ${status}<br>
+                <strong><span class="material-icons-round">sensors</span>Status:</strong> ${status}<br>
                 <small>Last updated: ${new Date().toLocaleTimeString()}</small>
             `;
         }
@@ -645,10 +759,10 @@
             const details = button.nextElementSibling;
             if (details.style.display === 'none') {
                 details.style.display = 'block';
-                button.innerHTML = '<i class="fas fa-minus-circle me-1"></i> Hide Details';
+                button.innerHTML = '<span class="material-icons-round">remove_circle</span> Hide Details';
             } else {
                 details.style.display = 'none';
-                button.innerHTML = '<i class="fas fa-info-circle me-1"></i> Show Details';
+                button.innerHTML = '<span class="material-icons-round">info</span> Show Details';
             }
         }
 

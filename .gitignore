@@ -7,3 +7,6 @@
 
 
 .venv
+
+frame-websocket/__pycache__/
+frame-websocket/.pytest_cache/
