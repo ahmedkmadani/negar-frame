@@ -50,7 +50,7 @@ minio_client = Minio(
     MINIO_ENDPOINT,
     access_key=MINIO_ACCESS_KEY,
     secret_key=MINIO_SECRET_KEY,
-    secure=False
+    secure=True
 )
 
 def ensure_bucket_exists(bucket_name):
@@ -79,9 +79,6 @@ def ensure_bucket_exists(bucket_name):
 
 # Ensure all required buckets exist
 ensure_bucket_exists(MINIO_BUCKET)
-ensure_bucket_exists(MINIO_BUCKET_PROCESSED)
-ensure_bucket_exists(MINIO_BUCKET_PROCESSED_TEST)
-
 
 # Redis connection pool configuration
 REDIS_HOST = os.getenv('REDIS_HOST', '34.55.93.180')
