@@ -203,7 +203,7 @@ def get_images():
     try:
         # List objects in the bucket
         objects = list(minio_client.list_objects(
-            minio_settings.MINIO_BUCKET_PROCESSED_TEST,
+            minio_settings.MINIO_BUCKET_PROCESSED,
             recursive=True
         ))
         
@@ -217,7 +217,7 @@ def get_images():
         for obj in recent_images:
             # Generate presigned URL (valid for 1 hour)
             url = minio_client.presigned_get_object(
-                minio_settings.MINIO_BUCKET_PROCESSED_TEST,
+                minio_settings.MINIO_BUCKET_PROCESSED,
                 obj.object_name,
                 expires=timedelta(hours=1)
             )
