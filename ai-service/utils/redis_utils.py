@@ -17,10 +17,7 @@ def initialize_redis():
         r = redis.Redis(
             host=REDIS_HOST,
             port=REDIS_PORT,
-            db=REDIS_DB,
-            socket_timeout=10,
-            socket_keepalive=True,
-            retry_on_timeout=True
+            db=REDIS_DB
         )
         logger.info(f"Connected to Redis at {REDIS_HOST}:{REDIS_PORT}")
         return r
