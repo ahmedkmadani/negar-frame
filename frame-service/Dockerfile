@@ -8,6 +8,12 @@ COPY requirements.txt .
 # Install dependencies
 RUN pip install -r requirements.txt
 
+# Copy the application code
+COPY . .
+
+# Make sure the utils package is properly recognized
+RUN touch utils/__init__.py
+
 # Environment variables
 ENV PYTHONUNBUFFERED=1
 
