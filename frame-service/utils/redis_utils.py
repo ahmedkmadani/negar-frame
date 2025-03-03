@@ -30,17 +30,22 @@ async def get_redis_pool():
     return _redis_pool
 
 async def initialize_redis():
-    """Initialize Redis connection from pool"""
+    """Initialize Redis connection with retry and keepalive settings"""
     try:
-        pool = await get_redis_pool()
-        r = redis.Redis(connection_pool=pool)
+        r = await redis.Redis(
+            host=REDIS_HOST,
+            port=REDIS_PORT,
+            db=REDIS_DB,
+            socket_timeout=10,
+            socket_keepalive=True,
+            socket_connect_timeout=5,
+            retry_on_timeout=True,
+            health_check_interval=15
+        )
         # Test connection
-        if await r.ping():
-            logger.info(f"Connected to Redis at {REDIS_HOST}:{REDIS_PORT}")
-            return r
-        else:
-            logger.error("Failed to ping Redis server")
-            raise ConnectionError("Could not ping Redis server")
+        await r.ping()
+        logger.info(f"Connected to Redis at {REDIS_HOST}:{REDIS_PORT}")
+        return r
     except Exception as e:
         logger.error(f"Redis connection error: {e}", exc_info=True)
         raise
