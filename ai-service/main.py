@@ -35,158 +35,7 @@ ensure_bucket_exists(MINIO_BUCKET)
 ensure_bucket_exists(MINIO_BUCKET_PROCESSED)
 ensure_bucket_exists(MINIO_BUCKET_PROCESSED_TEST)
 
-<<<<<<< HEAD
-# Update the URL generation function
-def get_minio_url(bucket, filename, expiry=timedelta(hours=1)):
-    """Generate a URL for a MinIO object
-    
-    Args:
-        bucket: The MinIO bucket name
-        filename: The object name/path in the bucket
-        expiry: Expiration time for presigned URLs (default: 1 hour)
-    
-    Returns:
-        A URL to access the object - presigned if needed for non-public buckets
-    """
-    try:
-        # Try to generate a presigned URL (works for both public and private buckets)
-        url = minio_client.presigned_get_object(
-            bucket_name=bucket,
-            object_name=filename,
-            expires=expiry.total_seconds()
-        )
-        return url
-    except Exception as e:
-        logger.warning(f"Failed to generate presigned URL: {e}")
-        # Fallback to direct URL (only works for public buckets)
-        return f"https://{MINIO_ENDPOINT}/{bucket}/{filename}"
 
-def process_image(image_data):
-
-    logger.info("\n" + "="*50)
-    logger.info(f"Processing image")
-    logger.info("="*50 + "\n")
-                
-                # Decode image
-    nparr = np.frombuffer(image_data, np.uint8)
-    img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-                
-                # Run detection
-    results = model(img)
-                
-    # Convert to PIL image for drawing
-    img_pil = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
-    draw = ImageDraw.Draw(img_pil)
-                
-    # Initialize people_data list to store all detected persons
-    people_data = []
-    
-    # Check if results contain detections
-    if len(results) > 0 and hasattr(results[0], 'boxes') and len(results[0].boxes) > 0:
-        # Filter persons with confidence > 0.5
-        persons = [(i, box) for i, box in enumerate(results[0].boxes.data) 
-                    if int(box[5]) == 0 and box[4] > 0.5]
-        
-        logger.info(f"Found {len(persons)} person(s) with confidence > 0.5\n")
-        
-        for person_idx, result in persons:
-            x1, y1, x2, y2, conf, class_id = result
-            logger.info(f"Person {person_idx + 1}")
-            logger.info(f"Confidence: {conf:.2f}")
-            logger.info(f"Bounding Box: ({x1:.1f}, {y1:.1f}) to ({x2:.1f}, {y2:.1f})\n")
-            
-            # Draw bounding box
-            draw.rectangle([x1, y1, x2, y2], outline='red', width=2)
-            
-            # Check if keypoints are available
-            if hasattr(results[0], 'keypoints') and results[0].keypoints is not None:
-                keypoints = results[0].keypoints.data[person_idx]
-                
-                # Define joint groups
-                joint_groups = {
-                    "Head": ["nose", "left_eye", "right_eye", "left_ear", "right_ear"],
-                    "Upper Body": ["left_shoulder", "right_shoulder", "left_elbow", "right_elbow", "left_wrist", "right_wrist"],
-                    "Lower Body": ["left_hip", "right_hip", "left_knee", "right_knee", "left_ankle", "right_ankle"]
-                }
-                
-                keypoint_names = [
-                    "nose", "left_eye", "right_eye", "left_ear", "right_ear",
-                    "left_shoulder", "right_shoulder", "left_elbow", "right_elbow",
-                    "left_wrist", "right_wrist", "left_hip", "right_hip",
-                    "left_knee", "right_knee", "left_ankle", "right_ankle"
-                ]
-                
-                # Log and draw keypoints
-                for group_name, joints in joint_groups.items():
-                    logger.info(f"{group_name}:")
-                    for joint in joints:
-                        try:
-                            idx = keypoint_names.index(joint)
-                            x, y, conf = keypoints[idx]
-                            if conf > 0.5:
-                                draw.ellipse([x-3, y-3, x+3, y+3], fill='blue')
-                                logger.info(f"  {joint:12s}: ({x:6.1f}, {y:6.1f}) conf={conf:.2f}")
-                        except Exception as e:
-                            logger.error(f"Error processing joint {joint}: {str(e)}")
-                    logger.info("")
-            
-            person_data = {
-                'confidence': float(conf),
-                'bounding_box': {
-                    'x1': float(x1),
-                    'y1': float(y1),
-                    'x2': float(x2),
-                    'y2': float(y2)
-                },
-                'keypoints': {}
-            }
-            
-            # Add keypoints if available
-            if hasattr(results[0], 'keypoints') and results[0].keypoints is not None:
-                keypoints = results[0].keypoints.data[person_idx]
-                keypoint_names = [
-                    "nose", "left_eye", "right_eye", "left_ear", "right_ear",
-                    "left_shoulder", "right_shoulder", "left_elbow", "right_elbow",
-                    "left_wrist", "right_wrist", "left_hip", "right_hip",
-                    "left_knee", "right_knee", "left_ankle", "right_ankle"
-                ]
-                
-                # Group keypoints
-                person_data['keypoints'] = {
-                    'head': {},
-                    'upper_body': {},
-                    'lower_body': {}
-                }
-                
-                for idx, name in enumerate(keypoint_names):
-                    x, y, conf = keypoints[idx]
-                    if conf > 0.5:  # Only include high-confidence keypoints
-                        point_data = {
-                            'x': float(x),
-                            'y': float(y),
-                            'confidence': float(conf)
-                        }
-                        
-                        # Assign to appropriate group
-                        if name in ["nose", "left_eye", "right_eye", "left_ear", "right_ear"]:
-                            person_data['keypoints']['head'][name] = point_data
-                        elif name in ["left_shoulder", "right_shoulder", "left_elbow", "right_elbow", "left_wrist", "right_wrist"]:
-                            person_data['keypoints']['upper_body'][name] = point_data
-                        else:
-                            person_data['keypoints']['lower_body'][name] = point_data
-            
-            people_data.append(person_data)
-    
-    # Convert back to bytes
-    img_byte_arr = io.BytesIO()
-    img_pil.save(img_byte_arr, format='PNG')
-    img_byte_arr.seek(0)
-    
-    # Return both the processed image and the results
-    return img_byte_arr, results, people_data
-
-=======
->>>>>>> 9355eb9c748ecb9a1101bd074f4c2566dd5191a0
 def main():
     """Main function to process images from Redis queue"""
     logger.info("Starting AI service")
@@ -309,25 +158,6 @@ def test_process_images():
                 
                 logger.info(f"Original image: {original_url}")
                 logger.info(f"Processed image: {processed_url}")
-<<<<<<< HEAD
-                
-                
-                # Publish results
-                result_data = {
-                    'original_filename': filename,
-                    'original_bucket': MINIO_BUCKET,
-                    'processed_filename': processed_filename,
-                    'processed_bucket': MINIO_BUCKET_PROCESSED_TEST,
-                    'status': 'success',
-                    'processing_time': processing_time,
-                    'detections': {
-                        'total_persons': len(people_data),
-                        'people': people_data
-                    }
-                }
-                
-                r.publish('ai_results', str(result_data))
-=======
                 
                 # Format and publish results
                 result_data = format_result_data(
@@ -335,7 +165,6 @@ def test_process_images():
                     original_url, processed_url, processing_time, people_data
                 )
                 publish_result(r, REDIS_CHANNEL_OUTPUT, result_data)
->>>>>>> 9355eb9c748ecb9a1101bd074f4c2566dd5191a0
                 logger.info(f"Published results for {filename}")
                 
                 # Add delay between images
