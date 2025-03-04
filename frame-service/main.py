@@ -352,8 +352,9 @@ async def get_latest_processed_images(limit: int = 5):
 async def get_latest_frames(limit: int = 5):
     """Get the latest raw frames from the frames bucket"""
     try:
+        processed_bucket = "yolo-images"
         # List objects in the frames bucket, sorted by last modified time (newest first)
-        objects = list_objects(MINIO_BUCKET)
+        objects = list_objects(processed_bucket)
         
         # Sort objects by last modified time (newest first)
         sorted_objects = sorted(

@@ -661,34 +661,34 @@
                 
                 const resultElement = document.createElement('div');
                 resultElement.className = 'col-md-4';
-                
-                if (data.status === 'success') {
+
+                if (data.type === "ai_result") {
                     // Update stats
                     stats.totalImages++;
                     stats.successCount++;
-                    stats.totalDetections += data.detections.total_persons;
-                    stats.totalProcessingTime += data.processing_time;
+                    stats.totalDetections += data.data.detections.total_persons;
+                    stats.totalProcessingTime += data.data.processing_time;
                     updateStatsDisplay();
                     
                     resultElement.innerHTML = `
                         <div class="card result-card">
                             <div class="card-body">
                                 <span class="badge bg-success status-badge"><span class="material-icons-round">check_circle</span>Success</span>
-                                <h5 class="card-title">${data.original_filename}</h5>
+                                <h5 class="card-title">${data.data.original_filename}</h5>
                                 <p class="card-text">
                                     <small class="text-muted">
-                                        <span class="material-icons-round" style="font-size: 16px;">timer</span> ${data.processing_time.toFixed(2)}s<br>
-                                        <span class="material-icons-round" style="font-size: 16px;">person</span> ${data.detections.total_persons} persons
+                                        <span class="material-icons-round" style="font-size: 16px;">timer</span> ${data.data.processing_time.toFixed(2)}s<br>
+                                        <span class="material-icons-round" style="font-size: 16px;">person</span> ${data.data.detections.total_persons} persons
                                     </small>
                                 </p>
                                 <div class="image-container">
-                                    <img src="${data.processed_url}" class="mb-2" alt="Processed Image">
+                                    <img src="${data.data.processed_url}" class="mb-2" alt="Processed Image">
                                 </div>
                                 <button class="btn btn-primary btn-sm" onclick="toggleDetails(this)">
                                     <span class="material-icons-round">info</span> Show Details
                                 </button>
                                 <div class="detection-details mt-2" style="display: none;">
-                                    <pre class="small">${JSON.stringify(data.detections, null, 2)}</pre>
+                                    <pre class="small">${JSON.stringify(data.data.detections, null, 2)}</pre>
                                 </div>
                             </div>
                         </div>
