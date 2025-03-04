@@ -367,7 +367,7 @@ async def get_latest_frames(limit: int = 5):
         results = []
         for obj in sorted_objects:
             # Generate a presigned URL
-            url = get_presigned_url(MINIO_BUCKET, obj.object_name)
+            url = get_presigned_url(processed_bucket, obj.object_name)
             
             # Extract timestamp and camera_id from filename if possible
             filename = obj.object_name
