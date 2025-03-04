@@ -22,6 +22,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the rest of the application
 COPY . .
 
+# Make sure the utils package is properly recognized
+RUN touch utils/__init__.py
+
 # Download YOLOv8n model
 RUN python -c "from ultralytics import YOLO; YOLO('yolov8n-pose.pt')"
 
@@ -30,4 +33,4 @@ ENV CUDA_VISIBLE_DEVICES=""
 ENV FORCE_CPU=1
 
 # Run the application
-CMD ["python", "main.py", "test"]
+CMD ["python", "main.py"]

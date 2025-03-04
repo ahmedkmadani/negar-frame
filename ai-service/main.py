@@ -1,15 +1,24 @@
-import redis
 import time
 import logging
-import os
-from ultralytics import YOLO
-from PIL import Image, ImageDraw
-import io
-from minio import Minio
-import numpy as np
-import cv2
-from datetime import datetime, timedelta
-import json
+from datetime import datetime
+
+# Import our utility modules
+from utils import (
+    process_image,
+    ensure_bucket_exists,
+    get_minio_url,
+    minio_client,
+    MINIO_BUCKET,
+    MINIO_BUCKET_PROCESSED,
+    MINIO_BUCKET_PROCESSED_TEST,
+    initialize_redis,
+    initialize_model,
+    format_result_data,
+    format_error_data,
+    publish_result,
+    REDIS_CHANNEL_INPUT,
+    REDIS_CHANNEL_OUTPUT
+)
 
 # Configure logging
 logging.basicConfig(
@@ -18,60 +27,15 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Add YOLOv8 model initialization with CPU device
-MODEL_PATH = "yolov8n-pose.pt"  
-model = YOLO(MODEL_PATH).to('cpu') # Use yolov8n (nano) for faster CPU inference
-
-# MinIO configuration
-MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "minio:9000")
-MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY", "negar-dev")
-MINIO_SECRET_KEY = os.getenv("MINIO_SECRET_KEY", "negar-dev")
-MINIO_BUCKET = "frames"
-MINIO_BUCKET_PROCESSED = "yolo-images"
-MINIO_BUCKET_PROCESSED_TEST = "yolo-images-test"
-
-REDIS_HOST = os.getenv('REDIS_HOST', '34.55.93.180')
-REDIS_PORT = int(os.getenv('REDIS_PORT', 6379))
-REDIS_DB = int(os.getenv('REDIS_DB', 0))
-
-# Initialize MinIO client
-minio_client = Minio(
-    MINIO_ENDPOINT,
-    access_key=MINIO_ACCESS_KEY,
-    secret_key=MINIO_SECRET_KEY,
-    secure=False  # Use False for local development
-)
-
-# Ensure buckets exist and have proper permissions
-def ensure_bucket_exists(bucket_name):
-    """Create bucket if it doesn't exist and set public read access"""
-    try:
-        if not minio_client.bucket_exists(bucket_name):
-            minio_client.make_bucket(bucket_name)
-            logger.info(f"Created bucket: {bucket_name}")
-        
-        # Set public read policy
-        policy = {
-            "Version": "2012-10-17",
-            "Statement": [
-                {
-                    "Effect": "Allow",
-                    "Principal": {"AWS": "*"},
-                    "Action": ["s3:GetObject"],
-                    "Resource": [f"arn:aws:s3:::{bucket_name}/*"]
-                }
-            ]
-        }
-        minio_client.set_bucket_policy(bucket_name, json.dumps(policy))
-        logger.info(f"Set public read policy for bucket: {bucket_name}")
-    except Exception as e:
-        logger.error(f"Error setting up bucket {bucket_name}: {e}")
+# Initialize YOLO model
+model = initialize_model()
 
 # Ensure all required buckets exist
 ensure_bucket_exists(MINIO_BUCKET)
 ensure_bucket_exists(MINIO_BUCKET_PROCESSED)
 ensure_bucket_exists(MINIO_BUCKET_PROCESSED_TEST)
 
+<<<<<<< HEAD
 # Update the URL generation function
 def get_minio_url(bucket, filename, expiry=timedelta(hours=1)):
     """Generate a URL for a MinIO object
@@ -221,45 +185,48 @@ def process_image(image_data):
     # Return both the processed image and the results
     return img_byte_arr, results, people_data
 
+=======
+>>>>>>> 9355eb9c748ecb9a1101bd074f4c2566dd5191a0
 def main():
-    logger.info("Starting AI Service")
+    """Main function to process images from Redis queue"""
+    logger.info("Starting AI service")
     
     try:
-        r = redis.Redis(
-            host=REDIS_HOST,
-            port=REDIS_PORT,
-            db=REDIS_DB,
-            socket_timeout=10,
-            socket_keepalive=True,
-            retry_on_timeout=True
-        )
+        # Initialize Redis
+        r = initialize_redis()
+        
+        # Subscribe to the frames channel
         pubsub = r.pubsub()
-        pubsub.subscribe('ai_channel')
-        logger.info("Successfully subscribed to ai_channel")
+        pubsub.subscribe(REDIS_CHANNEL_INPUT)
+        logger.info(f"Subscribed to {REDIS_CHANNEL_INPUT} channel")
         
         while True:
             try:
-                message = pubsub.get_message(timeout=1.0)
+                message = pubsub.get_message()
                 if message and message['type'] == 'message':
-                    data = eval(message['data'].decode('utf-8'))
-                    logger.info(f"Received message from ai_channel: {data}")
-                    
-                    bucket = data['bucket']
-                    filename = data['filename']
-                    
+                    data = message['data'].decode('utf-8')
                     try:
-                        # Get image from MinIO
-                        logger.info(f"Retrieving image from MinIO: {filename}")
+                        frame_info = eval(data)  # Parse the message data
+                        
+                        # Extract frame information
+                        bucket = frame_info.get('bucket', MINIO_BUCKET)
+                        filename = frame_info.get('filename')
+                        
+                        if not filename:
+                            logger.error("No filename in message")
+                            continue
+                            
+                        logger.info(f"Processing frame: {filename} from bucket: {bucket}")
+                        
+                        # Get image data from MinIO
                         image_data = minio_client.get_object(bucket, filename).read()
                         
-                        # Process image with YOLOv8
-                        logger.info("Processing image with YOLOv8")
+                        # Process image
                         start_time = time.time()
-                        processed_image, results, people_data = process_image(image_data)
+                        processed_image, results, people_data = process_image(image_data, model)
                         processing_time = time.time() - start_time
-                        logger.info(f"YOLOv8 processing completed in {processing_time:.2f} seconds")
                         
-                        # Upload processed image to the new bucket
+                        # Upload processed image
                         processed_filename = f"processed_{filename}"
                         original_url = get_minio_url(bucket, filename)
                         processed_url = get_minio_url(MINIO_BUCKET_PROCESSED, processed_filename)
@@ -272,31 +239,21 @@ def main():
                         )
                         logger.info(f"Uploaded processed image to {MINIO_BUCKET_PROCESSED}: {processed_filename}")
                         
-                        # Publish results back to Redis
-                        result_data = {
-                            'original_filename': filename,
-                            'original_bucket': bucket,
-                            'processed_filename': processed_filename,
-                            'processed_bucket': MINIO_BUCKET_PROCESSED,
-                            'status': 'success',
-                            'processing_time': processing_time,
-                            'detections': {
-                                'total_persons': len(people_data),
-                                'people': people_data
-                            }
-                        }
-                        r.publish('ai_results', str(result_data))
-                        logger.info("Published results to ai_results channel")
+                        # Format and publish results
+                        result_data = format_result_data(
+                            filename, bucket, processed_filename, MINIO_BUCKET_PROCESSED,
+                            original_url, processed_url, processing_time, people_data
+                        )
+                        publish_result(r, REDIS_CHANNEL_OUTPUT, result_data)
                         
                     except Exception as e:
                         logger.error(f"Error processing image: {e}", exc_info=True)
-                        # Publish error to Redis
-                        error_data = {
-                            'filename': filename,
-                            'status': 'error',
-                            'error': str(e)
-                        }
-                        r.publish('ai_results', str(error_data))
+                        # Publish error
+                        error_data = format_error_data(
+                            filename if 'filename' in locals() else None, 
+                            e
+                        )
+                        publish_result(r, REDIS_CHANNEL_OUTPUT, error_data)
                 
                 time.sleep(0.1)  # Prevent CPU spinning
                 
@@ -309,21 +266,14 @@ def main():
         raise
 
 def test_process_images():
-    """Test function to process all images in yolo-images bucket"""
+    """Test function to process all images in frames bucket"""
     logger.info("Starting test: Processing all images in frames bucket")
     
     try:
         # Initialize Redis
-        r = redis.Redis(
-            host=REDIS_HOST,
-            port=REDIS_PORT,
-            db=REDIS_DB,
-            socket_timeout=10,
-            socket_keepalive=True,
-            retry_on_timeout=True
-        )
+        r = initialize_redis()
         
-        # List all objects in yolo-images bucket
+        # List all objects in frames bucket
         try:    
             objects = list(minio_client.list_objects(MINIO_BUCKET))
             total_images = len(objects)
@@ -342,7 +292,7 @@ def test_process_images():
                 
                 # Process image
                 start_time = time.time()
-                processed_image, results, people_data = process_image(image_data)
+                processed_image, results, people_data = process_image(image_data, model)
                 processing_time = time.time() - start_time
                 
                 # Upload processed image
@@ -359,6 +309,7 @@ def test_process_images():
                 
                 logger.info(f"Original image: {original_url}")
                 logger.info(f"Processed image: {processed_url}")
+<<<<<<< HEAD
                 
                 
                 # Publish results
@@ -376,6 +327,15 @@ def test_process_images():
                 }
                 
                 r.publish('ai_results', str(result_data))
+=======
+                
+                # Format and publish results
+                result_data = format_result_data(
+                    filename, MINIO_BUCKET, processed_filename, MINIO_BUCKET_PROCESSED_TEST,
+                    original_url, processed_url, processing_time, people_data
+                )
+                publish_result(r, REDIS_CHANNEL_OUTPUT, result_data)
+>>>>>>> 9355eb9c748ecb9a1101bd074f4c2566dd5191a0
                 logger.info(f"Published results for {filename}")
                 
                 # Add delay between images
@@ -383,16 +343,15 @@ def test_process_images():
                 
             except Exception as e:
                 logger.error(f"Error processing {filename}: {e}", exc_info=True)
-                error_data = {
-                    'test_id': f"test_{int(time.time())}",
-                    'image_index': idx,
-                    'total_images': total_images,
-                    'filename': filename,
-                    'status': 'error',
-                    'error': str(e),
-                    'timestamp': datetime.now().isoformat()
-                }
-                r.publish('ai_results', str(error_data))
+                error_data = format_error_data(
+                    filename, 
+                    e,
+                    test_id=f"test_{int(time.time())}",
+                    image_index=idx,
+                    total_images=total_images,
+                    timestamp=datetime.now().isoformat()
+                )
+                publish_result(r, REDIS_CHANNEL_OUTPUT, error_data)
                 continue
         
         logger.info("\nTest completed: All images processed")

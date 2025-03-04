@@ -1,0 +1,15 @@
+nohup: ignoring input
+[2025-02-17 19:27:30 +0000] [780848] [INFO] Starting gunicorn 20.1.0
+[2025-02-17 19:27:30 +0000] [780848] [INFO] Listening at: http://0.0.0.0:5003 (780848)
+[2025-02-17 19:27:30 +0000] [780848] [INFO] Using worker: sync
+[2025-02-17 19:27:30 +0000] [780849] [INFO] Booting worker with pid: 780849
+[2025-02-17 19:27:30 +0000] [780850] [INFO] Booting worker with pid: 780850
+[2025-02-17 19:27:30 +0000] [780851] [INFO] Booting worker with pid: 780851
+[2025-02-17 19:27:30 +0000] [780852] [INFO] Booting worker with pid: 780852
+[2025-02-17 19:30:04 +0000] [780850] [INFO] Worker exiting (pid: 780850)
+[2025-02-17 19:30:04 +0000] [780848] [INFO] Handling signal: term
+[2025-02-17 19:30:04 +0000] [780849] [INFO] Worker exiting (pid: 780849)
+[2025-02-17 19:30:04 +0000] [780848] [WARNING] Worker with pid 780850 was terminated due to signal 15
+[2025-02-17 19:30:04 +0000] [780852] [INFO] Worker exiting (pid: 780852)
+[2025-02-17 19:30:04 +0000] [780851] [INFO] Worker exiting (pid: 780851)
+[2025-02-17 19:30:04 +0000] [780848] [INFO] Shutting down: Master
