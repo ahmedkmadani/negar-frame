@@ -348,7 +348,7 @@ async def get_latest_processed_images(limit: int = 5):
             'message': 'Failed to retrieve latest processed images'
         }
 
-@app.get("/api/latest-frames")
+@app.get("/images")
 async def get_latest_frames(limit: int = 5):
     """Get the latest raw frames from the frames bucket"""
     try:
