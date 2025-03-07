@@ -36,15 +36,16 @@ jobs:
         rsync -avz --exclude '.git' \
                    --exclude '.github' \
                    --exclude 'node_modules' \
+                   --exclude 'venv' \
                    --exclude '__pycache__' \
                    ./ $SSH_USER@$SSH_HOST:$DOCKER_COMPOSE_DIR/
 
     - name: Deploy with Docker Compose
       run: |
         ssh $SSH_USER@$SSH_HOST "cd $DOCKER_COMPOSE_DIR && \
-        docker-compose down && \
-        docker-compose pull && \
-        docker-compose up -d --build"
+        sudo docker-compose down && \
+        sudo docker-compose pull && \
+        sudo docker-compose up -d --build"
 
     - name: Check deployment status
       run: |
