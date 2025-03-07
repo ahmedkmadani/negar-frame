@@ -3,9 +3,6 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 import logging
 from datetime import datetime
-import io
-from PIL import Image
-import base64
 
 # Import our enhanced utility modules
 from utils import (
@@ -17,12 +14,10 @@ from utils import (
     subscribe_to_channel,
     publish_message,
     get_message_with_timeout,
-    safe_redis_operation,
     REDIS_CHANNEL_SYNC_FRAME,
     REDIS_CHANNEL_AI_RESULTS,
     
     # MinIO utilities
-    get_object,
     put_object,
     get_presigned_url,
     list_objects,
@@ -33,16 +28,11 @@ from utils import (
     ConnectionManager,
     
     # Frame utilities
-    format_frame_message,
     format_ai_result_message,
     parse_message_data,
-    process_frame_from_redis,
-    process_aktar_frame,
+    process_aktar_frame
     
     # Error handling utilities
-    format_error,
-    retry_async_operation,
-    async_error_handler
 )
 
 # Configure logging
@@ -348,13 +338,13 @@ async def get_latest_processed_images(limit: int = 5):
             'message': 'Failed to retrieve latest processed images'
         }
 
-@app.get("/images")
+@app.get("/api/latest-frames")
 async def get_latest_frames(limit: int = 5):
     """Get the latest raw frames from the frames bucket"""
     try:
-        processed_bucket = "yolo-images"
+        frames_bucket = "frames"
         # List objects in the frames bucket, sorted by last modified time (newest first)
-        objects = list_objects(processed_bucket)
+        objects = list_objects(frames_bucket)
         
         # Sort objects by last modified time (newest first)
         sorted_objects = sorted(
@@ -367,7 +357,7 @@ async def get_latest_frames(limit: int = 5):
         results = []
         for obj in sorted_objects:
             # Generate a presigned URL
-            url = get_presigned_url(processed_bucket, obj.object_name)
+            url = get_presigned_url(frames_bucket, obj.object_name)
             
             # Extract timestamp and camera_id from filename if possible
             filename = obj.object_name
