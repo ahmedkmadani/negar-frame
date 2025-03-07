@@ -49,8 +49,8 @@ jobs:
 
     - name: Check deployment status
       run: |
-        ssh $SSH_USER@$SSH_HOST "cd $DOCKER_COMPOSE_DIR && docker-compose ps"
+        ssh $SSH_USER@$SSH_HOST "cd $DOCKER_COMPOSE_DIR && sudo docker-compose ps"
 
     - name: Cleanup old images
       run: |
-        ssh $SSH_USER@$SSH_HOST "docker image prune -f" 
+        ssh $SSH_USER@$SSH_HOST "sudo docker image prune -f" 
