@@ -1,0 +1,55 @@
+name: Deploy to Dev Server
+
+on:
+  push:
+    branches: [ dev-server ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: development
+
+    env:
+      SSH_HOST: ${{ secrets.DEV_SERVER_HOST }}
+      SSH_USER: ${{ secrets.DEV_SERVER_USER }}
+      SSH_KEY: ${{ secrets.DEV_SERVER_SSH_KEY }}
+      DOCKER_COMPOSE_DIR: /home/${{ secrets.DEV_SERVER_USER }}/negar-ai
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Install SSH key
+      run: |
+        mkdir -p ~/.ssh
+        echo "$SSH_KEY" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan -H $SSH_HOST >> ~/.ssh/known_hosts
+
+    - name: Create remote directory
+      run: |
+        ssh $SSH_USER@$SSH_HOST "mkdir -p $DOCKER_COMPOSE_DIR || { echo 'Failed to create directory'; exit 1; }"
+
+    - name: Copy files to server
+      run: |
+        rsync -avz --exclude '.git' \
+                   --exclude '.github' \
+                   --exclude 'node_modules' \
+                   --exclude '__pycache__' \
+                   ./ $SSH_USER@$SSH_HOST:$DOCKER_COMPOSE_DIR/
+
+    - name: Deploy with Docker Compose
+      run: |
+        ssh $SSH_USER@$SSH_HOST "cd $DOCKER_COMPOSE_DIR && \
+        docker-compose down && \
+        docker-compose pull && \
+        docker-compose up -d --build"
+
+    - name: Check deployment status
+      run: |
+        ssh $SSH_USER@$SSH_HOST "cd $DOCKER_COMPOSE_DIR && docker-compose ps"
+
+    - name: Cleanup old images
+      run: |
+        ssh $SSH_USER@$SSH_HOST "docker image prune -f" 
