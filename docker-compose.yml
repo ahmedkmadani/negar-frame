@@ -36,14 +36,14 @@ services:
       - minio
     networks:
       - app-network
-    deploy:
-      resources:
-        limits:
-          cpus: '1'
-          memory: 2G
-        reservations:
-          cpus: '0.5'
-          memory: 1G
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '1'
+    #       memory: 2G
+    #     reservations:
+    #       cpus: '0.5'
+    #       memory: 1G
 
   frame-service:
     build: 
