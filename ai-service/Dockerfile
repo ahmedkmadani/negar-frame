@@ -23,7 +23,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Download YOLOv8n model
-RUN python -c "from ultralytics import YOLO; YOLO('yolov12x-pose.pt')"
+RUN python -c "from ultralytics import YOLO; YOLO('yolov11x-pose.pt')"
 
 # Set environment variables to ensure PyTorch uses CPU
 ENV CUDA_VISIBLE_DEVICES=""
