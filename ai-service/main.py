@@ -19,7 +19,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Add YOLOv8 model initialization with CPU device
-MODEL_PATH = "yolov8n-pose.pt"  
+MODEL_PATH = "yolov8x-pose.pt"  
 model = YOLO(MODEL_PATH).to('cpu') # Use yolov8n (nano) for faster CPU inference
 
 # MinIO configuration
