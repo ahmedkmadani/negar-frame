@@ -14,11 +14,14 @@ services:
       - MINIO_SECURE=false
       - REDIS_PASSWORD=v@lk3y#2023_C@che!
       - REDIS_PORT=6379
+    extra_hosts:
+      - "host.docker.internal:host-gateway"  # Required for Linux
     volumes:
       - ./ai-service:/app
       - ./utils:/app/utils
     networks:
       - app-network
+    
 
   frame-service:
     container_name: frame-service

@@ -14,12 +14,19 @@ from utils.error_utils import async_error_handler
 
 app = FastAPI(
     title="AI Results WebSocket & API Service",
-    description="WebSocket & API service for streaming AI detection results",
+    description="""
+    WebSocket & API service for streaming AI detection results.
+    
+    Features:
+    - Real-time AI detection results via WebSocket
+    - REST API for retrieving processed images
+    - MinIO integration for image storage
+    """,
     version="1.0.0",
-    openapi_version="2.0.0",
-    openapi_url="/openapi.json",  # Enable OpenAPI schema
-    docs_url="/docs",            # Enable Swagger UI
-    redoc_url="/redoc"          # Enable ReDoc
+    openapi_url="/openapi.json",
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_version="3.1.0"  # Added OpenAPI version
 )
 
 logger = get_logger("frame-service")
@@ -30,7 +37,7 @@ manager = ConnectionManager()
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=WEBSOCKET_CONFIG["cors_origins"],
+    allow_origins=["*"],  # Adjust this in production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
