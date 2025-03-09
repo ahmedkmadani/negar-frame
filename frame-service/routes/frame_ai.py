@@ -13,25 +13,27 @@ logger = get_logger("frame-service")
 
 frame_ai_route = APIRouter(tags=["Frame AI"], prefix="/api")
 
+from datetime import datetime
+
 class ImageMetadata(BaseModel):
     camera_id: Optional[str] = Field(None, example="camera_01")
-    timestamp: Optional[str] = Field(None, example="2024-03-10:12:30:45")
+    timestamp: Optional[datetime] = Field(None, example="2024-03-10T12:30:45")
     size: int = Field(..., example=1024576)
-    last_modified: str = Field(..., example="2024-03-10T12:30:45.123Z")
+    last_modified: datetime = Field(..., example="2024-03-10T12:30:45.123Z")
+
 
 class ImageInfo(BaseModel):
     filename: str = Field(..., example="camera_01_2024-03-10-12-30-45.jpg")
-    url: str = Field(..., example="https://minio-server/bucket/camera_01_2024-03-10-12-30-45.jpg")
+    url: str = Field(..., example="https://example.com/image.jpg")
     metadata: ImageMetadata
 
-class ResponseModel(BaseModel):
-    status: str = Field(..., example="success")
-    count: int = Field(..., example=5)
-    images: List[ImageInfo]
+
+class ImageInfoResponse(BaseModel):
+    images: List[ImageInfo] = Field(default_factory=list)
 
 @frame_ai_route.get(
     "/latest-processed-images",
-    response_model=ResponseModel)
+    response_model=ImageInfoResponse)
 async def get_latest_processed_images(
     limit: int = Query(
         default=5,
@@ -112,7 +114,7 @@ async def get_latest_processed_images(
 
 @frame_ai_route.get(
     "/latest-frames",
-    response_model=ResponseModel)
+    response_model=ImageInfoResponse)
 async def get_latest_frames(
     limit: int = Query(
         default=5,
