@@ -41,7 +41,7 @@ async def main():
         r = await initialize_redis()
         
         # Subscribe to the frames channel
-        pubsub = r.pubsub()
+        pubsub =  r.pubsub()
         await pubsub.subscribe(REDIS_CHANNEL_INPUT)
         logger.info(f"Subscribed to {REDIS_CHANNEL_INPUT} channel")
         

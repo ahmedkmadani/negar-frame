@@ -153,3 +153,22 @@ async def process_aktar_frame(message_data):
     except Exception as e:
         logger.error(f"Error processing Aktar frame: {e}")
         return None 
+    
+async def format_ai_result_message(result_data):
+    """Format an AI result message for broadcasting"""
+    try:
+        if not isinstance(result_data, dict):
+            result_data = parse_message_data(result_data)
+        
+        # Ensure we have a timestamp
+        if 'timestamp' not in result_data:
+            result_data['timestamp'] = datetime.now().isoformat()
+            
+        return {
+            'type': 'ai_result',
+            'data': result_data,
+            'timestamp': result_data.get('timestamp')
+        }
+    except Exception as e:
+        logger.error(f"Error formatting AI result message: {e}")
+        return None

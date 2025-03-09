@@ -9,7 +9,7 @@ from utils.websocket_utils import ConnectionManager
 from utils.config import WEBSOCKET_CONFIG
 from utils.redis_utils import initialize_redis, subscribe_to_channel, publish_message, get_message_with_timeout, REDIS_CHANNEL_SYNC_FRAME, REDIS_CHANNEL_AI_RESULTS
 from utils.minio_utils import put_object, MINIO_BUCKET, ensure_bucket_exists
-from utils.frame_utils import process_aktar_frame
+from utils.frame_utils import process_aktar_frame, format_ai_result_message
 from utils.error_utils import async_error_handler
 
 app = FastAPI(
@@ -65,6 +65,7 @@ async def frame_listener():
             while True:
                 try:
                     message = await get_message_with_timeout(pubsub, timeout=1.0)
+                    logger.info(f"Received message: {message}")
                     
                     if message and message['type'] == 'message':
                         # Process the Aktar frame
@@ -118,7 +119,7 @@ async def frame_listener():
                 
         if redis_client:
             try:
-                await redis_client.close()
+                redis_client.close()
             except:
                 pass
         
@@ -136,7 +137,7 @@ async def ai_result_listener():
         
         try:
             # Initialize Redis
-            redis_client = await initialize_redis()
+            redis_client = initialize_redis()
             
             # Subscribe to AI results channel
             pubsub = await subscribe_to_channel(redis_client, REDIS_CHANNEL_AI_RESULTS)
@@ -146,10 +147,10 @@ async def ai_result_listener():
             while True:
                 try:
                     message = await get_message_with_timeout(pubsub, timeout=1.0)
-                    
+                    logger.info(f"Received message: {message}")
                     if message and message['type'] == 'message':
                         # Format the AI result message
-                        result_message = format_ai_result_message(message['data'])
+                        result_message = await format_ai_result_message(message['data'])
                         
                         if result_message:
                             # Broadcast to all connected clients
@@ -190,7 +191,7 @@ async def health_check():
         # Test Redis connection
         redis_client = await initialize_redis()
         redis_ok = await redis_client.ping()
-        await redis_client.close()
+        redis_client.close()
         
         # Get connection statistics
         connection_stats = manager.get_connection_stats()

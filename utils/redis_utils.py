@@ -3,7 +3,9 @@ from .config import REDIS_CONFIG
 from urllib.parse import quote_plus
 from .error_utils import retry_async_operation, async_error_handler
 import json
-from aioredis import Redis
+from redis.asyncio import Redis
+import redis.asyncio as aioredis
+
 logger = logging.getLogger(__name__)
 
 # Extract configuration
@@ -31,16 +33,17 @@ async def initialize_redis():
                             retry_on_timeout=True,
                             health_check_interval=15)
         else:
-            r = Redis.Redis(
+            r = Redis(
                 host=REDIS_HOST,
                 port=REDIS_PORT,
                 db=REDIS_DB,
                 socket_timeout=10,
                 socket_keepalive=True,
                 socket_connect_timeout=5,
-            retry_on_timeout=True,
-            health_check_interval=15
-        )
+                retry_on_timeout=True,
+                health_check_interval=15,
+                decode_responses=True
+            )
         # Test connection
         await r.ping()
         logger.info(f"Connected to Redis at {REDIS_HOST}:{REDIS_PORT}")
