@@ -1,7 +1,8 @@
 import time
 import logging
 from datetime import datetime
-
+from utils.logger import get_logger
+import asyncio
 # Import our utility modules
 from utils import (
     process_image,
@@ -20,12 +21,7 @@ from utils import (
     REDIS_CHANNEL_OUTPUT
 )
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+logger = get_logger("ai-service")
 
 # Initialize YOLO model
 model = initialize_model()
@@ -36,22 +32,22 @@ ensure_bucket_exists(MINIO_BUCKET_PROCESSED)
 ensure_bucket_exists(MINIO_BUCKET_PROCESSED_TEST)
 
 
-def main():
+async def main():
     """Main function to process images from Redis queue"""
     logger.info("Starting AI service")
     
     try:
         # Initialize Redis
-        r = initialize_redis()
+        r = await initialize_redis()
         
         # Subscribe to the frames channel
         pubsub = r.pubsub()
-        pubsub.subscribe(REDIS_CHANNEL_INPUT)
+        await pubsub.subscribe(REDIS_CHANNEL_INPUT)
         logger.info(f"Subscribed to {REDIS_CHANNEL_INPUT} channel")
         
         while True:
             try:
-                message = pubsub.get_message()
+                message = await pubsub.get_message()
                 if message and message['type'] == 'message':
                     data = message['data'].decode('utf-8')
                     try:
@@ -114,7 +110,7 @@ def main():
         logger.error(f"Redis connection error: {e}", exc_info=True)
         raise
 
-def test_process_images():
+async def test_process_images():
     """Test function to process all images in frames bucket"""
     logger.info("Starting test: Processing all images in frames bucket")
     
@@ -191,7 +187,7 @@ def test_process_images():
 if __name__ == "__main__":
     import sys
     if len(sys.argv) > 1 and sys.argv[1] == "test":
-        test_process_images()
+        asyncio.run(test_process_images())
     else:
-        main()
+        asyncio.run(main())
 

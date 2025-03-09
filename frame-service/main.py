@@ -1,52 +1,30 @@
 import asyncio
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-import logging
 from datetime import datetime
-
-# Import our enhanced utility modules
-from utils import (
-    # Configuration
-    WEBSOCKET_CONFIG,
-    
-    # Redis utilities
-    initialize_redis,
-    subscribe_to_channel,
-    publish_message,
-    get_message_with_timeout,
-    REDIS_CHANNEL_SYNC_FRAME,
-    REDIS_CHANNEL_AI_RESULTS,
-    
-    # MinIO utilities
-    put_object,
-    get_presigned_url,
-    list_objects,
-    MINIO_BUCKET,
-    ensure_bucket_exists,
-    
-    # WebSocket utilities
-    ConnectionManager,
-    
-    # Frame utilities
-    format_ai_result_message,
-    parse_message_data,
-    process_aktar_frame
-    
-    # Error handling utilities
-)
-
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+from routes.webscoet_ai import websocket_route
+from routes.frame_ai import frame_ai_route
+from utils.logger import get_logger
+from utils.websocket_utils import ConnectionManager
+from utils.config import WEBSOCKET_CONFIG
+from utils.redis_utils import initialize_redis, subscribe_to_channel, publish_message, get_message_with_timeout, REDIS_CHANNEL_SYNC_FRAME, REDIS_CHANNEL_AI_RESULTS
+from utils.minio_utils import put_object, MINIO_BUCKET, ensure_bucket_exists
+from utils.frame_utils import process_aktar_frame
+from utils.error_utils import async_error_handler
 
 app = FastAPI(
-    title="AI Results WebSocket Service",
-    description="WebSocket service for streaming AI detection results",
-    version="1.0.0"
+    title="AI Results WebSocket & API Service",
+    description="WebSocket & API service for streaming AI detection results",
+    version="1.0.0",
+    openapi_url="/openapi.json",  # Enable OpenAPI schema
+    docs_url="/docs",            # Enable Swagger UI
+    redoc_url="/redoc"          # Enable ReDoc
 )
+
+logger = get_logger("frame-service")
+
+# Initialize connection manager
+manager = ConnectionManager()
 
 # Add CORS middleware
 app.add_middleware(
@@ -57,8 +35,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Initialize connection manager
-manager = ConnectionManager()
+
 
 async def frame_listener():
     """Background task to listen for new frames from Redis"""
@@ -206,44 +183,6 @@ async def ai_result_listener():
         logger.info("Attempting to reconnect to Redis in 5 seconds...")
         await asyncio.sleep(5)
 
-@app.websocket("/ws/ai_results")
-async def websocket_endpoint(websocket: WebSocket):
-    """WebSocket endpoint for clients to connect and receive AI results"""
-    client_id = await manager.connect(websocket)
-    
-    try:
-        # Send welcome message
-        await manager.send_personal_message({
-            "type": "connection_established",
-            "client_id": client_id,
-            "message": "Connected to AI Results WebSocket",
-            "timestamp": datetime.now().isoformat()
-        }, client_id)
-        
-        # Handle client messages
-        while True:
-            try:
-                data = await websocket.receive_text()
-                message = parse_message_data(data)
-                
-                # Handle ping messages
-                if message.get("type") == "ping":
-                    await manager.send_personal_message({
-                        "type": "pong",
-                        "timestamp": datetime.now().isoformat()
-                    }, client_id)
-                
-            except WebSocketDisconnect:
-                await manager.disconnect(client_id)
-                break
-            except Exception as e:
-                logger.error(f"Error processing client message: {e}")
-                
-    except Exception as e:
-        logger.error(f"WebSocket error: {e}")
-    finally:
-        await manager.disconnect(client_id)
-
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
@@ -270,139 +209,6 @@ async def health_check():
             "timestamp": datetime.now().isoformat()
         }
 
-@app.get("/api/latest-processed-images")
-async def get_latest_processed_images(limit: int = 5):
-    """Get the latest processed images from the AI results bucket"""
-    try:
-        # Get the AI results bucket name from config
-        # This assumes the AI service is storing processed images in a specific bucket
-        processed_bucket = "yolo-images"  # You might want to add this to your config
-        
-        # List objects in the bucket, sorted by last modified time (newest first)
-        objects = list_objects(processed_bucket)
-        
-        # Sort objects by last modified time (newest first)
-        sorted_objects = sorted(
-            objects, 
-            key=lambda obj: obj.last_modified, 
-            reverse=True
-        )[:limit]
-        
-        # Generate presigned URLs for each object
-        results = []
-        for obj in sorted_objects:
-            # Generate a presigned URL
-            url = get_presigned_url(processed_bucket, obj.object_name)
-            
-            # Extract timestamp and camera_id from filename if possible
-            filename = obj.object_name
-            metadata = {}
-            
-            # Try to parse metadata from filename (assuming format like camera_id_timestamp.jpg)
-            try:
-                parts = filename.split('_')
-                if len(parts) >= 2:
-                    camera_id = parts[0]
-                    timestamp_str = '_'.join(parts[1:]).replace('.jpg', '')
-                    
-                    metadata = {
-                        'camera_id': camera_id,
-                        'timestamp': timestamp_str.replace('-', ':'),
-                        'size': obj.size,
-                        'last_modified': obj.last_modified.isoformat()
-                    }
-            except:
-                # If parsing fails, just use basic metadata
-                metadata = {
-                    'size': obj.size,
-                    'last_modified': obj.last_modified.isoformat()
-                }
-            
-            results.append({
-                'filename': filename,
-                'url': url,
-                'metadata': metadata
-            })
-        
-        return {
-            'status': 'success',
-            'count': len(results),
-            'images': results
-        }
-        
-    except Exception as e:
-        logger.error(f"Error getting latest processed images: {e}")
-        return {
-            'status': 'error',
-            'error': str(e),
-            'message': 'Failed to retrieve latest processed images'
-        }
-
-@app.get("/api/latest-frames")
-async def get_latest_frames(limit: int = 5):
-    """Get the latest raw frames from the frames bucket"""
-    try:
-        frames_bucket = "frames"
-        # List objects in the frames bucket, sorted by last modified time (newest first)
-        objects = list_objects(frames_bucket)
-        
-        # Sort objects by last modified time (newest first)
-        sorted_objects = sorted(
-            objects, 
-            key=lambda obj: obj.last_modified, 
-            reverse=True
-        )[:limit]
-        
-        # Generate presigned URLs for each object
-        results = []
-        for obj in sorted_objects:
-            # Generate a presigned URL
-            url = get_presigned_url(frames_bucket, obj.object_name)
-            
-            # Extract timestamp and camera_id from filename if possible
-            filename = obj.object_name
-            metadata = {}
-            
-            # Try to parse metadata from filename (assuming format like camera_id_timestamp.jpg)
-            try:
-                parts = filename.split('_')
-                if len(parts) >= 2:
-                    camera_id = parts[0]
-                    timestamp_str = '_'.join(parts[1:]).replace('.jpg', '')
-                    
-                    metadata = {
-                        'camera_id': camera_id,
-                        'timestamp': timestamp_str.replace('-', ':'),
-                        'size': obj.size,
-                        'last_modified': obj.last_modified.isoformat()
-                    }
-            except:
-                # If parsing fails, just use basic metadata
-                metadata = {
-                    'size': obj.size,
-                    'last_modified': obj.last_modified.isoformat()
-                }
-            
-            results.append({
-                'filename': filename,
-                'url': url,
-                'metadata': metadata
-            })
-        
-        return {
-            'status': 'success',
-            'count': len(results),
-            'images': results
-        }
-        
-    except Exception as e:
-        logger.error(f"Error getting latest frames: {e}")
-        return {
-            'status': 'error',
-            'error': str(e),
-            'message': 'Failed to retrieve latest frames'
-        }
-
 @app.on_event("startup")
 async def startup_event():
     """Start background tasks on application startup"""
@@ -418,6 +224,8 @@ async def startup_event():
     
     logger.info("Background tasks started")
 
+app.include_router(websocket_route)
+app.include_router(frame_ai_route)
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=5004, reload=True)

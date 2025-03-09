@@ -49,5 +49,6 @@ __all__ = [
     # Configuration
     'MINIO_CONFIG',
     'REDIS_CONFIG',
-    'MODEL_CONFIG'
+    'MODEL_CONFIG',
+    'WEBSOCKET_CONFIG'
 ]

@@ -1,44 +1,43 @@
 import logging
-import redis.asyncio as redis
-import json
 from .config import REDIS_CONFIG
+from urllib.parse import quote_plus
 from .error_utils import retry_async_operation, async_error_handler
-
+import json
+from aioredis import Redis
 logger = logging.getLogger(__name__)
 
 # Extract configuration
 REDIS_HOST = REDIS_CONFIG["host"]
 REDIS_PORT = REDIS_CONFIG["port"]
 REDIS_DB = REDIS_CONFIG["db"]
+REDIS_CHANNEL_INPUT = REDIS_CONFIG["channels"]["input"]
+REDIS_CHANNEL_OUTPUT = REDIS_CONFIG["channels"]["output"]
+REDIS_PASSWORD = REDIS_CONFIG["password"]
 REDIS_CHANNEL_SYNC_FRAME = REDIS_CONFIG["channels"]["sync_frame"]
 REDIS_CHANNEL_AI_RESULTS = REDIS_CONFIG["channels"]["ai_results"]
-
-# Redis connection pool
-_redis_pool = None
-
-async def get_redis_pool():
-    """Get or create Redis connection pool"""
-    global _redis_pool
-    if _redis_pool is None:
-        _redis_pool = redis.ConnectionPool(
-            host=REDIS_HOST,
-            port=REDIS_PORT,
-            db=REDIS_DB,
-            decode_responses=True
-        )
-        logger.info(f"Created Redis connection pool to {REDIS_HOST}:{REDIS_PORT}")
-    return _redis_pool
 
 async def initialize_redis():
     """Initialize Redis connection with retry and keepalive settings"""
     try:
-        r = await redis.Redis(
-            host=REDIS_HOST,
-            port=REDIS_PORT,
-            db=REDIS_DB,
-            socket_timeout=10,
-            socket_keepalive=True,
-            socket_connect_timeout=5,
+        is_domain = '.' in REDIS_HOST and not REDIS_HOST.startswith('.')
+        if is_domain:
+            # URL encode the password to handle special characters
+            encoded_password = quote_plus(REDIS_PASSWORD)
+            redis_url = f"redis://:{encoded_password}@{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
+            r = Redis.from_url(redis_url,
+                            socket_timeout=10,
+                            socket_keepalive=True,
+                            socket_connect_timeout=5,
+                            retry_on_timeout=True,
+                            health_check_interval=15)
+        else:
+            r = Redis.Redis(
+                host=REDIS_HOST,
+                port=REDIS_PORT,
+                db=REDIS_DB,
+                socket_timeout=10,
+                socket_keepalive=True,
+                socket_connect_timeout=5,
             retry_on_timeout=True,
             health_check_interval=15
         )
@@ -48,8 +47,8 @@ async def initialize_redis():
         return r
     except Exception as e:
         logger.error(f"Redis connection error: {e}", exc_info=True)
-        raise
-
+        raise 
+    
 @async_error_handler
 async def subscribe_to_channel(redis_client, channel):
     """Subscribe to a Redis channel with error handling"""

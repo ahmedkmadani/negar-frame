@@ -14,16 +14,18 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first to leverage Docker cache
-COPY requirements.txt .
+COPY ai-service/requirements.txt .
 
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the rest of the application
-COPY . .
 
-# Make sure the utils package is properly recognized
-RUN touch utils/__init__.py
+# Copy the rest of the application
+COPY ai-service/ /app/
+COPY utils/ /app/
+
+# Add the current directory to PYTHONPATH to find the utils module
+ENV PYTHONPATH="${PYTHONPATH}:/app"
 
 # Download YOLOv8n model
 RUN python -c "from ultralytics import YOLO; YOLO('yolov8n-pose.pt')"

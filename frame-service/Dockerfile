@@ -2,17 +2,26 @@ FROM python:3.9-slim
 
 WORKDIR /app
 
+# Install system dependencies for OpenCV
+RUN apt-get update && apt-get install -y \
+    libgl1-mesa-glx \
+    libglib2.0-0 \
+    && rm -rf /var/lib/apt/lists/*
+
 # Copy requirements first
-COPY requirements.txt .
+COPY frame-service/requirements.txt .
 
 # Install dependencies
 RUN pip install -r requirements.txt
 
-# Copy the application code
-COPY . .
 
-# Make sure the utils package is properly recognized
-RUN touch utils/__init__.py
+# Copy the application code
+# Copy the rest of the application
+COPY frame-service/ /app/
+COPY utils/ /app/
+
+# Add the current directory to PYTHONPATH to find the utils module
+ENV PYTHONPATH="${PYTHONPATH}:/app"
 
 # Environment variables
 ENV PYTHONUNBUFFERED=1

@@ -43,13 +43,13 @@ jobs:
     - name: Deploy with Docker Compose
       run: |
         ssh $SSH_USER@$SSH_HOST "cd $DOCKER_COMPOSE_DIR && \
-        sudo docker-compose down && \
-        sudo docker-compose pull && \
-        sudo docker-compose up -d --build"
+        sudo docker-compose -f docker-compose-dev.yml down && \
+        sudo docker-compose -f docker-compose-dev.yml pull && \
+        sudo docker-compose -f docker-compose-dev.yml up -d --build"
 
     - name: Check deployment status
       run: |
-        ssh $SSH_USER@$SSH_HOST "cd $DOCKER_COMPOSE_DIR && sudo docker-compose ps"
+        ssh $SSH_USER@$SSH_HOST "cd $DOCKER_COMPOSE_DIR && sudo docker-compose -f docker-compose-dev.yml ps"
 
     - name: Cleanup old images
       run: |
