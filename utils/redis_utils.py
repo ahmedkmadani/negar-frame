@@ -21,7 +21,7 @@ REDIS_CHANNEL_AI_RESULTS = REDIS_CONFIG["channels"]["ai_results"]
 async def initialize_redis():
     """Initialize Redis connection with retry and keepalive settings"""
     try:
-        is_domain = '.' in REDIS_HOST and not REDIS_HOST.startswith('.')
+        is_domain = not REDIS_HOST.startswith('127.0.0.1') or not REDIS_HOST.startswith('localhost')
         if is_domain:
             # URL encode the password to handle special characters
             encoded_password = quote_plus(REDIS_PASSWORD)

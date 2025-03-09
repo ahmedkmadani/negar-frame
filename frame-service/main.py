@@ -16,6 +16,7 @@ app = FastAPI(
     title="AI Results WebSocket & API Service",
     description="WebSocket & API service for streaming AI detection results",
     version="1.0.0",
+    openapi_version="2.0.0",
     openapi_url="/openapi.json",  # Enable OpenAPI schema
     docs_url="/docs",            # Enable Swagger UI
     redoc_url="/redoc"          # Enable ReDoc
