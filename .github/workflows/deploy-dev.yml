@@ -37,6 +37,7 @@ jobs:
                    --exclude '.github' \
                    --exclude 'node_modules' \
                    --exclude 'venv' \
+                   --exclude '.venv' \
                    --exclude '__pycache__' \
                    ./ $SSH_USER@$SSH_HOST:$DOCKER_COMPOSE_DIR/
 
