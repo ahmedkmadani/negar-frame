@@ -29,66 +29,9 @@ class ResponseModel(BaseModel):
     count: int = Field(..., example=5)
     images: List[ImageInfo]
 
-    class Config:
-        schema_extra = {
-            "example": {
-                "status": "success",
-                "count": 2,
-                "images": [
-                    {
-                        "filename": "camera_01_2024-03-10-12-30-45.jpg",
-                        "url": "https://minio-server/bucket/camera_01_2024-03-10-12-30-45.jpg",
-                        "metadata": {
-                            "camera_id": "camera_01",
-                            "timestamp": "2024-03-10:12:30:45",
-                            "size": 1024576,
-                            "last_modified": "2024-03-10T12:30:45.123Z"
-                        }
-                    },
-                    {
-                        "filename": "camera_02_2024-03-10-12-30-40.jpg",
-                        "url": "https://minio-server/bucket/camera_02_2024-03-10-12-30-40.jpg",
-                        "metadata": {
-                            "camera_id": "camera_02",
-                            "timestamp": "2024-03-10:12:30:40",
-                            "size": 1048576,
-                            "last_modified": "2024-03-10T12:30:40.123Z"
-                        }
-                    }
-                ]
-            }
-        }
-
 @frame_ai_route.get(
     "/latest-processed-images",
-    response_model=ResponseModel,
-    responses={
-        200: {
-            "description": "Successfully retrieved processed images",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "status": "success",
-                        "count": 2,
-                        "images": [
-                            {
-                                "filename": "camera_01_2024-03-10-12-30-45.jpg",
-                                "url": "https://minio-server/processed/camera_01_2024-03-10-12-30-45.jpg",
-                                "metadata": {
-                                    "camera_id": "camera_01",
-                                    "timestamp": "2024-03-10:12:30:45",
-                                    "size": 1024576,
-                                    "last_modified": "2024-03-10T12:30:45.123Z"
-                                }
-                            }
-                        ]
-                    }
-                }
-            }
-        },
-        500: {"description": "Internal server error"}
-    }
-)
+    response_model=ResponseModel)
 async def get_latest_processed_images(
     limit: int = Query(
         default=5,
@@ -169,34 +112,7 @@ async def get_latest_processed_images(
 
 @frame_ai_route.get(
     "/latest-frames",
-    response_model=ResponseModel,
-    responses={
-        200: {
-            "description": "Successfully retrieved raw frames",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "status": "success",
-                        "count": 2,
-                        "images": [
-                            {
-                                "filename": "camera_01_2024-03-10-12-30-45.jpg",
-                                "url": "https://minio-server/frames/camera_01_2024-03-10-12-30-45.jpg",
-                                "metadata": {
-                                    "camera_id": "camera_01",
-                                    "timestamp": "2024-03-10:12:30:45",
-                                    "size": 1024576,
-                                    "last_modified": "2024-03-10T12:30:45.123Z"
-                                }
-                            }
-                        ]
-                    }
-                }
-            }
-        },
-        500: {"description": "Internal server error"}
-    }
-)
+    response_model=ResponseModel)
 async def get_latest_frames(
     limit: int = Query(
         default=5,
