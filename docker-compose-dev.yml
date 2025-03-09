@@ -11,6 +11,7 @@ services:
       - MINIO_ACCESS_KEY=minio
       - MINIO_SECRET_KEY=mIn!0#2023_S3cureKey
       - REDIS_HOST=localhost
+      - MINIO_SECURE=false
       - REDIS_PASSWORD=v@lk3y#2023_C@che!
       - REDIS_PORT=6379
     volumes:
@@ -31,6 +32,7 @@ services:
       - REDIS_PORT=6379
       - MINIO_ENDPOINT=localhost:9000
       - MINIO_ACCESS_KEY=minio
+      - MINIO_SECURE=false
       - MINIO_SECRET_KEY=mIn!0#2023_S3cureKey
       - REDIS_PASSWORD=v@lk3y#2023_C@che!
     volumes:
