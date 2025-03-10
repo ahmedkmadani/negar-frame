@@ -25,7 +25,8 @@ async def initialize_redis():
         if is_domain:
             # URL encode the password to handle special characters
             encoded_password = quote_plus(REDIS_PASSWORD)
-            redis_url = f"redis://:{encoded_password}@{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
+            # redis_url = f"redis://:{encoded_password}@{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
+            redis_url = f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
             r = Redis.from_url(redis_url,
                             socket_timeout=10,
                             socket_keepalive=True,
