@@ -13,20 +13,20 @@ class ConnectionManager:
     
     def __init__(self):
         self.active_connections: Dict[str, WebSocket] = {}
+        self._connection_counter = 0
         self.connection_times: Dict[str, datetime] = {}
         self.connection_metadata: Dict[str, Dict] = {}
         self.event_handlers: Dict[str, List[Callable]] = {}
         
-    async def connect(self, websocket: WebSocket, metadata: Optional[Dict] = None) -> str:
-        """Connect a new client with optional metadata"""
+    async def connect(self, websocket: WebSocket) -> str:
+        """Accept connection and add to active connections"""
         await websocket.accept()
-        client_id = str(id(websocket))
+        self._connection_counter += 1
+        client_id = f"client_{self._connection_counter}"
         self.active_connections[client_id] = websocket
         self.connection_times[client_id] = datetime.now()
         
-        if metadata:
-            self.connection_metadata[client_id] = metadata
-        else:
+        if not self.connection_metadata.get(client_id):
             self.connection_metadata[client_id] = {}
             
         # Trigger connect event
@@ -36,7 +36,7 @@ class ConnectionManager:
         return client_id
     
     async def disconnect(self, client_id: str):
-        """Disconnect a client by ID"""
+        """Remove connection from active connections"""
         if client_id in self.active_connections:
             websocket = self.active_connections[client_id]
             
@@ -53,7 +53,7 @@ class ConnectionManager:
     
     @async_error_handler
     async def send_personal_message(self, message: Dict, client_id: str):
-        """Send a message to a specific client by ID"""
+        """Send a message to a specific client"""
         if client_id in self.active_connections:
             websocket = self.active_connections[client_id]
             
@@ -66,8 +66,8 @@ class ConnectionManager:
         return False
     
     @async_error_handler
-    async def broadcast(self, message: Dict, exclude: Optional[List[str]] = None):
-        """Broadcast a message to all connected clients with optional exclusions"""
+    async def broadcast(self, message: Dict):
+        """Broadcast a message to all connected clients"""
         if not self.active_connections:
             logger.debug("No clients connected, skipping broadcast")
             return 0
@@ -82,19 +82,13 @@ class ConnectionManager:
             'active_clients': len(self.active_connections)
         }
         
-        exclude_set = set(exclude or [])
         disconnected_clients = []
         sent_count = 0
         
         for client_id, websocket in self.active_connections.items():
-            if client_id in exclude_set:
-                continue
-                
             try:
                 await websocket.send_json(message)
                 sent_count += 1
-            except WebSocketDisconnect:
-                disconnected_clients.append(client_id)
             except Exception as e:
                 logger.error(f"Error broadcasting to client {client_id}: {e}")
                 disconnected_clients.append(client_id)
@@ -149,23 +143,21 @@ class ConnectionManager:
                     logger.error(f"Error in {event} event handler: {e}")
     
     async def start_heartbeat(self, interval: int = 30):
-        """Start sending heartbeat messages to all clients"""
+        """Start heartbeat to check connection status"""
         while True:
             await asyncio.sleep(interval)
-            if self.active_connections:
-                await self.broadcast({
-                    'type': 'heartbeat',
-                    'timestamp': datetime.now().isoformat(),
-                    'connected_clients': len(self.active_connections)
-                })
-                logger.debug(f"Sent heartbeat to {len(self.active_connections)} clients")
+            await self.broadcast({
+                "type": "heartbeat",
+                "timestamp": datetime.now().isoformat()
+            })
     
     def get_connection_stats(self):
-        """Get statistics about current connections"""
+        """Get current connection statistics"""
         current_time = datetime.now()
         return {
-            'total': len(self.active_connections),
-            'connections': {
+            "active_connections": len(self.active_connections),
+            "total_connections_made": self._connection_counter,
+            "connections": {
                 client_id: {
                     'connected_for': str(current_time - self.connection_times[client_id]),
                     'connected_at': self.connection_times[client_id].isoformat(),

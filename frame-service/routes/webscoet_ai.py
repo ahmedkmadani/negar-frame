@@ -41,9 +41,16 @@ async def websocket_endpoint(websocket: WebSocket):
         "timestamp": "ISO-8601 timestamp"
     }
     """
-    client_id = await manager.connect(websocket)
-    
+    client_id = None
     try:
+        # Accept the WebSocket connection first
+        await websocket.accept()
+        logger.info("WebSocket connection accepted")
+
+        # Then connect to the manager
+        client_id = await manager.connect(websocket)
+        logger.info(f"Client {client_id} registered with manager")
+        
         # Send welcome message
         await manager.send_personal_message({
             "type": "connection_established",
@@ -66,7 +73,7 @@ async def websocket_endpoint(websocket: WebSocket):
                     }, client_id)
                 
             except WebSocketDisconnect:
-                await manager.disconnect(client_id)
+                logger.info(f"Client {client_id} disconnected")
                 break
             except Exception as e:
                 logger.error(f"Error processing client message: {e}")
@@ -74,4 +81,6 @@ async def websocket_endpoint(websocket: WebSocket):
     except Exception as e:
         logger.error(f"WebSocket error: {e}")
     finally:
-        await manager.disconnect(client_id)
+        if client_id:
+            await manager.disconnect(client_id)
+            logger.info(f"Client {client_id} cleanup completed")

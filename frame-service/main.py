@@ -11,6 +11,8 @@ from utils.redis_utils import initialize_redis, subscribe_to_channel, publish_me
 from utils.minio_utils import put_object, MINIO_BUCKET, ensure_bucket_exists
 from utils.frame_utils import process_aktar_frame, format_ai_result_message
 from utils.error_utils import async_error_handler
+from PIL import Image
+import io
 
 app = FastAPI(
     title="AI Results WebSocket & API Service",
@@ -69,6 +71,10 @@ async def frame_listener():
             pubsub = await subscribe_to_channel(redis_client, REDIS_CHANNEL_SYNC_FRAME)
             logger.info(f"Subscribed to {REDIS_CHANNEL_SYNC_FRAME} channel")
             
+            await pubsub.subscribe('frame_sync')
+            logger.info("Subscribed to 'frame_sync' channel")   
+            message = await pubsub.get_message(timeout=1.0)
+
             # Process messages
             while True:
                 try:
@@ -77,14 +83,26 @@ async def frame_listener():
                     
                     if message and message['type'] == 'message':
                         # Process the Aktar frame
-                        frame_data = await process_aktar_frame(message['data'])
-                        
-                        if frame_data:
-                            # Store in MinIO for persistence
-                            filename = frame_data['filename']
-                            image_data = frame_data['image_data']
-                            timestamp = frame_data['timestamp']
-                            camera_id = frame_data['camera_id']
+                        decoded_message = message['data'].decode('utf-8')
+                        parts = decoded_message.split("--AKTAR--")
+                        if len(parts) == 3:
+                            timestamp = parts[0]
+                            camera_list = parts[1].split(",")
+                            logger.info(f"Processing frame for timestamp: {timestamp}, camera: {camera_list[0]}")
+                            
+                            image_data = await redis_client.hget(timestamp, camera_list[0])
+                            
+                            if image_data:
+                                logger.info(f"Retrieved image data from Redis, size: {len(image_data)} bytes")
+                                    # Process image
+                                image = Image.open(io.BytesIO(image_data))
+                                logger.info(f"Image opened successfully: {image.format}, {image.size}")
+                                
+                                img_buffer = io.BytesIO()
+                                image.save(img_buffer, format='PNG')
+                                img_buffer.seek(0)
+                                
+                                filename = f"frame_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}.png"
                             
                             # Upload to MinIO
                             put_object(
@@ -100,7 +118,7 @@ async def frame_listener():
                                     'bucket': MINIO_BUCKET,
                                     'filename': filename,
                                     'timestamp': timestamp,
-                                    'camera_id': camera_id,
+                                    'camera_id': camera_list[0],
                                     'upload_time': datetime.now().isoformat()
                                 }
                                 await publish_message(redis_client, 'ai_channel', str(ai_message))
@@ -145,7 +163,7 @@ async def ai_result_listener():
         
         try:
             # Initialize Redis
-            redis_client = initialize_redis()
+            redis_client = await initialize_redis()
             
             # Subscribe to AI results channel
             pubsub = await subscribe_to_channel(redis_client, REDIS_CHANNEL_AI_RESULTS)
@@ -155,6 +173,8 @@ async def ai_result_listener():
             while True:
                 try:
                     message = await get_message_with_timeout(pubsub, timeout=1.0)
+                    logger.info(f"Subscribed to {REDIS_CHANNEL_AI_RESULTS} channel")
+
                     logger.info(f"Received message: {message}")
                     if message and message['type'] == 'message':
                         # Format the AI result message
