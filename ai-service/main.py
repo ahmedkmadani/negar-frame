@@ -63,7 +63,7 @@ async def main():
                         # Process image with YOLOv8
                         logger.info("Processing image with YOLOv8")
                         start_time = time.time()
-                        processed_image, results, people_data = process_image(image_data)
+                        processed_image, results, people_data = process_image(image_data, model)
                         processing_time = time.time() - start_time
                         logger.info(f"YOLOv8 processing completed in {processing_time:.2f} seconds")
                         
