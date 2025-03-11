@@ -39,7 +39,11 @@ manager = ConnectionManager()
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Adjust this in production
+    allow_origins=[
+          "https://dev-negar-ai.leamech.com",  # Add your domain
+        "http://localhost:3000",             # For local development
+        "http://localhost:5004", 
+        ],  # Adjust this in production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
