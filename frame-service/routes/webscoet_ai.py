@@ -41,46 +41,22 @@ async def websocket_endpoint(websocket: WebSocket):
         "timestamp": "ISO-8601 timestamp"
     }
     """
-    client_id = None
+    client_id = await manager.connect(websocket)
     try:
-        # Accept the WebSocket connection first
-        await websocket.accept()
-        logger.info("WebSocket connection accepted")
-
-        # Then connect to the manager
-        client_id = await manager.connect(websocket)
-        logger.info(f"Client {client_id} registered with manager")
-        
-        # Send welcome message
-        await manager.send_personal_message({
-            "type": "connection_established",
-            "client_id": client_id,
-            "message": "Connected to AI Results WebSocket",
-            "timestamp": datetime.now().isoformat()
-        }, client_id)
-        
-        # Handle client messages
         while True:
             try:
-                data = await websocket.receive_text()
-                message = parse_message_data(data)
-                
-                # Handle ping messages
-                if message.get("type") == "ping":
-                    await manager.send_personal_message({
-                        "type": "pong",
-                        "timestamp": datetime.now().isoformat()
-                    }, client_id)
-                
+                # Keep the connection alive and handle client messages
+                data = await websocket.receive_json()
+                # Handle any client messages here
+                await manager.send_personal_message({
+                    "type": "ack",
+                    "received": data,
+                    "timestamp": datetime.now().isoformat()
+                }, client_id)
             except WebSocketDisconnect:
-                logger.info(f"Client {client_id} disconnected")
+                manager.disconnect(client_id)
                 break
             except Exception as e:
-                logger.error(f"Error processing client message: {e}")
-                
-    except Exception as e:
-        logger.error(f"WebSocket error: {e}")
+                logger.error(f"Error handling message from client {client_id}: {e}")
     finally:
-        if client_id:
-            await manager.disconnect(client_id)
-            logger.info(f"Client {client_id} cleanup completed")
+        manager.disconnect(client_id)
