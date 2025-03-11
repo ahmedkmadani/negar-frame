@@ -47,31 +47,27 @@ async def main():
         
         while True:
             try:
-                message = await pubsub.get_message()
+                message = pubsub.get_message(timeout=1.0)
                 if message and message['type'] == 'message':
-                    data = message['data'].decode('utf-8')
+                    data = eval(message['data'].decode('utf-8'))
+                    logger.info(f"Received message from ai_channel: {data}")
+                    
+                    bucket = data['bucket']
+                    filename = data['filename']
+                    
                     try:
-                        frame_info = eval(data)  # Parse the message data
-                        
-                        # Extract frame information
-                        bucket = frame_info.get('bucket', MINIO_BUCKET)
-                        filename = frame_info.get('filename')
-                        
-                        if not filename:
-                            logger.error("No filename in message")
-                            continue
-                            
-                        logger.info(f"Processing frame: {filename} from bucket: {bucket}")
-                        
-                        # Get image data from MinIO
+                        # Get image from MinIO
+                        logger.info(f"Retrieving image from MinIO: {filename}")
                         image_data = minio_client.get_object(bucket, filename).read()
                         
-                        # Process image
+                        # Process image with YOLOv8
+                        logger.info("Processing image with YOLOv8")
                         start_time = time.time()
-                        processed_image, results, people_data = process_image(image_data, model)
+                        processed_image, results, people_data = process_image(image_data)
                         processing_time = time.time() - start_time
+                        logger.info(f"YOLOv8 processing completed in {processing_time:.2f} seconds")
                         
-                        # Upload processed image
+                        # Upload processed image to the new bucket
                         processed_filename = f"processed_{filename}"
                         original_url = get_minio_url(bucket, filename)
                         processed_url = get_minio_url(MINIO_BUCKET_PROCESSED, processed_filename)
@@ -84,12 +80,25 @@ async def main():
                         )
                         logger.info(f"Uploaded processed image to {MINIO_BUCKET_PROCESSED}: {processed_filename}")
                         
-                        # Format and publish results
-                        result_data = format_result_data(
-                            filename, bucket, processed_filename, MINIO_BUCKET_PROCESSED,
-                            original_url, processed_url, processing_time, people_data
-                        )
-                        publish_result(r, REDIS_CHANNEL_OUTPUT, result_data)
+                        # Publish results back to Redis
+                        result_data = {
+                            'original_filename': filename,
+                            'original_bucket': bucket,
+                            'processed_filename': processed_filename,
+                            'processed_bucket': MINIO_BUCKET_PROCESSED,
+                            'original_url': original_url,
+                            'processed_url': processed_url,
+                            'status': 'success',
+                            'processing_time': processing_time,
+                            'detections': {
+                                'total_persons': len(people_data),
+                                'people': people_data
+                            }
+                        }
+                        # publish_result(r, REDIS_CHANNEL_OUTPUT, result_data)
+                        await r.publish(REDIS_CHANNEL_OUTPUT, str(result_data))
+                        logger.info("Published results to ai_results channel")
+                        
                         
                     except Exception as e:
                         logger.error(f"Error processing image: {e}", exc_info=True)
@@ -98,7 +107,8 @@ async def main():
                             filename if 'filename' in locals() else None, 
                             e
                         )
-                        publish_result(r, REDIS_CHANNEL_OUTPUT, error_data)
+                        # publish_result(r, REDIS_CHANNEL_OUTPUT, error_data)
+                        await r.publish(REDIS_CHANNEL_OUTPUT, str(error_data))
                 
                 time.sleep(0.1)  # Prevent CPU spinning
                 
