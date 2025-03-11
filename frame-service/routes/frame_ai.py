@@ -17,9 +17,9 @@ from datetime import datetime
 
 class ImageMetadata(BaseModel):
     camera_id: Optional[str] = Field(None, example="camera_01")
-    timestamp: Optional[datetime] = Field(None, example="2024-03-10T12:30:45")
+    timestamp: Optional[str] = Field(None, example="2024-03-10T12:30:45")
     size: int = Field(..., example=1024576)
-    last_modified: datetime = Field(..., example="2024-03-10T12:30:45.123Z")
+    last_modified: str = Field(..., example="2024-03-10T12:30:45.123Z")
 
 
 class ImageInfo(BaseModel):
@@ -68,29 +68,25 @@ async def get_latest_processed_images(
             # Generate a presigned URL
             url = get_presigned_url(processed_bucket, obj.object_name)
             
-            # Extract timestamp and camera_id from filename if possible
+            # Extract timestamp from filename
             filename = obj.object_name
-            metadata = {}
-            
-            # Try to parse metadata from filename (assuming format like camera_id_timestamp.jpg)
             try:
+                # Parse the timestamp from filename (frame_YYYYMMDD_HHMMSS_microseconds.png)
                 parts = filename.split('_')
-                if len(parts) >= 2:
-                    camera_id = parts[0]
-                    timestamp_str = '_'.join(parts[1:]).replace('.jpg', '')
-                    
-                    metadata = {
-                        'camera_id': camera_id,
-                        'timestamp': timestamp_str.replace('-', ':'),
-                        'size': obj.size,
-                        'last_modified': obj.last_modified.isoformat()
-                    }
+                if len(parts) >= 3:
+                    date_str = parts[1]
+                    time_str = parts[2]
+                    timestamp = f"{date_str[:4]}-{date_str[4:6]}-{date_str[6:]}T{time_str[:2]}:{time_str[2:4]}:{time_str[4:6]}"
+                else:
+                    timestamp = obj.last_modified.isoformat()
             except:
-                # If parsing fails, just use basic metadata
-                metadata = {
-                    'size': obj.size,
-                    'last_modified': obj.last_modified.isoformat()
-                }
+                timestamp = obj.last_modified.isoformat()
+            
+            metadata = {
+                'timestamp': timestamp,
+                'size': obj.size,
+                'last_modified': obj.last_modified.isoformat()
+            }
             
             results.append({
                 'filename': filename,
