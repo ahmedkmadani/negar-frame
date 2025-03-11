@@ -47,7 +47,7 @@ async def main():
         
         while True:
             try:
-                message = pubsub.get_message(timeout=1.0)
+                message = await pubsub.get_message(timeout=1.0)
                 if message and message['type'] == 'message':
                     data = eval(message['data'].decode('utf-8'))
                     logger.info(f"Received message from ai_channel: {data}")
