@@ -577,9 +577,9 @@
                 const data = await response.json();
                 logDebug('Received recent images:', data);
                 
-                if (data.status === 'success' && data.images && data.images.length > 0) {
+                if (data.images && data.images.length > 0) {
                     recentStatusDiv.className = 'alert alert-success';
-                    recentStatusDiv.innerHTML = `<span class="material-icons-round">check_circle</span>Found ${data.count} recent images`;
+                    recentStatusDiv.innerHTML = `<span class="material-icons-round">check_circle</span>Found ${data.images.length} recent images`;
                     
                     // Display the images
                     data.images.forEach(image => {
@@ -591,8 +591,8 @@
                                     <h5 class="card-title">${image.filename}</h5>
                                     <p class="card-text">
                                         <small class="text-muted">
-                                            <span class="material-icons-round" style="font-size: 16px;">description</span> ${formatFileSize(image.size)}<br>
-                                            <span class="material-icons-round" style="font-size: 16px;">schedule</span> ${formatDate(image.last_modified)}
+                                            <span class="material-icons-round" style="font-size: 16px;">description</span> ${formatFileSize(image.metadata.size)}<br>
+                                            <span class="material-icons-round" style="font-size: 16px;">schedule</span> ${formatDate(image.metadata.last_modified)}
                                         </small>
                                     </p>
                                     <div class="image-container">
