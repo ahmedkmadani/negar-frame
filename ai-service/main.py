@@ -41,7 +41,7 @@ async def main():
         r = await initialize_redis()
         
         # Subscribe to the frames channel
-        pubsub =  r.pubsub()
+        pubsub = await r.pubsub()
         await pubsub.subscribe(REDIS_CHANNEL_INPUT)
         logger.info(f"Subscribed to {REDIS_CHANNEL_INPUT} channel")
         
@@ -55,7 +55,24 @@ async def main():
                     bucket = data['bucket']
                     filename = data['filename']
                     
+                    # Verify bucket exists
+                    if not minio_client.bucket_exists(bucket):
+                        logger.error(f"Bucket {bucket} does not exist")
+                        continue
+                    
                     try:
+                        # Check if object exists before trying to get it
+                        try:
+                            minio_client.stat_object(bucket, filename)
+                        except Exception as e:
+                            logger.error(f"Object {filename} not found in bucket {bucket}: {e}")
+                            # Wait a short time and retry once
+                            await asyncio.sleep(0.5)
+                            try:
+                                minio_client.stat_object(bucket, filename)
+                            except:
+                                continue
+                        
                         # Get image from MinIO
                         logger.info(f"Retrieving image from MinIO: {filename}")
                         image_data = minio_client.get_object(bucket, filename).read()
@@ -71,6 +88,10 @@ async def main():
                         processed_filename = f"processed_{filename}"
                         original_url = get_minio_url(bucket, filename)
                         processed_url = get_minio_url(MINIO_BUCKET_PROCESSED, processed_filename)
+                        
+                        # Ensure processed bucket exists
+                        ensure_bucket_exists(MINIO_BUCKET_PROCESSED)
+                        
                         minio_client.put_object(
                             MINIO_BUCKET_PROCESSED,
                             processed_filename,
@@ -93,28 +114,31 @@ async def main():
                             'detections': {
                                 'total_persons': len(people_data),
                                 'people': people_data
-                            }
+                            },
+                            'timestamp': data.get('timestamp'),
+                            'camera_id': data.get('camera_id')
                         }
-                        # publish_result(r, REDIS_CHANNEL_OUTPUT, result_data)
                         await r.publish(REDIS_CHANNEL_OUTPUT, str(result_data))
                         logger.info("Published results to ai_results channel")
-                        
                         
                     except Exception as e:
                         logger.error(f"Error processing image: {e}", exc_info=True)
                         # Publish error
-                        error_data = format_error_data(
-                            filename if 'filename' in locals() else None, 
-                            e
-                        )
-                        # publish_result(r, REDIS_CHANNEL_OUTPUT, error_data)
+                        error_data = {
+                            'status': 'error',
+                            'filename': filename,
+                            'bucket': bucket,
+                            'error': str(e),
+                            'timestamp': data.get('timestamp'),
+                            'camera_id': data.get('camera_id')
+                        }
                         await r.publish(REDIS_CHANNEL_OUTPUT, str(error_data))
                 
-                time.sleep(0.1)  # Prevent CPU spinning
+                await asyncio.sleep(0.1)  # Prevent CPU spinning
                 
             except Exception as e:
                 logger.error(f"Error processing message: {e}", exc_info=True)
-                time.sleep(1)  # Wait before retrying
+                await asyncio.sleep(1)  # Wait before retrying
                 
     except Exception as e:
         logger.error(f"Redis connection error: {e}", exc_info=True)
