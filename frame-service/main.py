@@ -260,7 +260,7 @@ async def startup_event():
     asyncio.create_task(frame_listener())
     
     # Start heartbeat task
-    asyncio.create_task(manager.start_heartbeat(WEBSOCKET_CONFIG["ping_interval"]))
+    asyncio.create_task(manager.send_heartbeat())
     
     logger.info("Background tasks started")
 
