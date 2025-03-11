@@ -181,14 +181,21 @@ async def ai_result_listener():
 
                     logger.info(f"Received message: {message}")
                     if message and message['type'] == 'message':
-                        # Format the AI result message
-                        result_message = await format_ai_result_message(message['data'])
-                        
-                        if result_message:
-                            # Broadcast to all connected clients
-                            await manager.broadcast(result_message)
-                            logger.info(f"Broadcasted AI result: {result_message.get('data', {}).get('processed_filename', 'unknown')}")
-                    
+                        try:
+                            # Parse the message data
+                            data = eval(message['data'])  # Using eval since the data is a string representation of dict
+                            data['received_timestamp'] = datetime.now().isoformat()
+                            
+                            # Add metadata
+                            data['metadata'] = {
+                                'channel': REDIS_CHANNEL_AI_RESULTS,
+                                'active_clients': len(manager.active_connections)
+                            }
+                            
+                            logger.info(f"Broadcasting AI result to {len(manager.active_connections)} clients")
+                            await manager.broadcast(data)
+                        except Exception as e:
+                            logger.error(f"Error processing message: {e}")
                     # Small delay to prevent CPU spinning
                     await asyncio.sleep(0.01)
                     
@@ -259,6 +266,7 @@ async def startup_event():
 
 app.include_router(websocket_route)
 app.include_router(frame_ai_route)
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=5004, reload=True)
