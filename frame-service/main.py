@@ -108,8 +108,9 @@ async def frame_listener():
                             # Upload to MinIO
                             put_object(
                                 MINIO_BUCKET, 
-                                filename, 
-                                image_data, 
+                                filename,
+                                img_buffer,
+                                img_buffer.getbuffer().nbytes,
                                 content_type="image/jpeg"
                             )
                             
