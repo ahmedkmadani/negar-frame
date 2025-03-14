@@ -2,11 +2,11 @@
 from .image_utils import process_image
 from .minio_utils import (
     ensure_bucket_exists, 
-    get_minio_url, 
     minio_client,
     MINIO_BUCKET, 
     MINIO_BUCKET_PROCESSED, 
-    MINIO_BUCKET_PROCESSED_TEST
+    MINIO_BUCKET_PROCESSED_TEST,
+    get_presigned_url
 )
 from .redis_utils import (
     initialize_redis,
