@@ -7,7 +7,7 @@ services:
       context: .
       dockerfile: ./ai-service/Dockerfile
     environment:
-      - MINIO_ENDPOINT=dev-minio:9000
+      - MINIO_ENDPOINT=dev-minio.leamech.com
       - MINIO_ACCESS_KEY=minio
       - MINIO_SECRET_KEY=mIn!0#2023_S3cureKey
       - REDIS_HOST=dev-valkey
@@ -33,7 +33,7 @@ services:
     environment:
       - REDIS_HOST=dev-valkey
       - REDIS_PORT=6379
-      - MINIO_ENDPOINT=dev-minio:9000
+      - MINIO_ENDPOINT=dev-minio.leamech.com
       - MINIO_ACCESS_KEY=minio
       - MINIO_SECURE=false
       - MINIO_SECRET_KEY=mIn!0#2023_S3cureKey
