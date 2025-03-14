@@ -5,14 +5,13 @@ from datetime import datetime
 from routes.webscoet_ai import websocket_route
 from routes.frame_ai import frame_ai_route
 from utils.logger import get_logger
-from utils.websocket_utils import ConnectionManager
-from utils.config import WEBSOCKET_CONFIG
+from utils.websocket_utils import connection_manager
 from utils.redis_utils import initialize_redis, subscribe_to_channel, publish_message, get_message_with_timeout, REDIS_CHANNEL_SYNC_FRAME, REDIS_CHANNEL_AI_RESULTS
 from utils.minio_utils import put_object, MINIO_BUCKET, ensure_bucket_exists
-from utils.frame_utils import process_aktar_frame, format_ai_result_message
-from utils.error_utils import async_error_handler
 from PIL import Image
 import io
+from fastapi import FastAPI
+
 
 app = FastAPI(
     title="AI Results WebSocket & API Service",
@@ -33,8 +32,6 @@ app = FastAPI(
 
 logger = get_logger("frame-service")
 
-# Initialize connection manager
-manager = ConnectionManager()
 
 # Add CORS middleware
 app.add_middleware(
@@ -189,11 +186,15 @@ async def ai_result_listener():
                             # Add metadata
                             data['metadata'] = {
                                 'channel': REDIS_CHANNEL_AI_RESULTS,
-                                'active_clients': len(manager.active_connections)
+                                'active_clients': len(connection_manager.active_connections)
                             }
                             
-                            logger.info(f"Broadcasting AI result to {len(manager.active_connections)} clients")
-                            await manager.broadcast(data)
+                            logger.info(f"Broadcasting AI result to {len(connection_manager.active_connections)} clients")
+                            clinet_id = "281470929678928"
+                            logger.info(f"Broadcasting AI result to client {clinet_id}")
+                            await connection_manager.send_personal_message(data, clinet_id)
+                            
+                            await connection_manager.broadcast(data)
                         except Exception as e:
                             logger.error(f"Error processing message: {e}")
                     # Small delay to prevent CPU spinning
@@ -233,7 +234,7 @@ async def health_check():
         redis_client.close()
         
         # Get connection statistics
-        connection_stats = manager.get_connection_stats()
+        connection_stats = connection_manager.get_connection_stats()
         
         return {
             "status": "healthy",
@@ -260,7 +261,7 @@ async def startup_event():
     asyncio.create_task(frame_listener())
     
     # Start heartbeat task
-    asyncio.create_task(manager.send_heartbeat())
+    asyncio.create_task(connection_manager.send_heartbeat())
     
     logger.info("Background tasks started")
 

@@ -13,29 +13,34 @@ logger = logging.getLogger(__name__)
 HEARTBEAT_INTERVAL = 30
 
 class ConnectionManager:
+    _instance = None
+    _initialized = False
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super(ConnectionManager, cls).__new__(cls)
+        return cls._instance
+
     def __init__(self):
-        self.active_connections: Dict[str, WebSocket] = {}
-        self.connection_times: Dict[str, datetime] = {}
+        # Only initialize once
+        if not ConnectionManager._initialized:
+            self.active_connections: Dict[str, WebSocket] = {}
+            self._connection_counter = 0
+            ConnectionManager._initialized = True
+            logger.info("ConnectionManager initialized")
 
     async def connect(self, websocket: WebSocket) -> str:
+        """Register a new WebSocket connection"""
         await websocket.accept()
-        client_id = str(id(websocket))
+        self._connection_counter += 1
+        client_id = str(self._connection_counter)
         self.active_connections[client_id] = websocket
-        self.connection_times[client_id] = datetime.now()
-        await self.send_personal_message({
-            "type": "connection_status",
-            "status": "connected",
-            "client_id": client_id,
-            "connected_at": self.connection_times[client_id].isoformat(),
-            "total_clients": len(self.active_connections)
-        }, client_id)
         logger.info(f"Client {client_id} connected. Total connections: {len(self.active_connections)}")
         return client_id
 
     def disconnect(self, client_id: str):
         if client_id in self.active_connections:
             del self.active_connections[client_id]
-            del self.connection_times[client_id]
             logger.info(f"Client {client_id} disconnected. Total connections: {len(self.active_connections)}")
 
     async def send_personal_message(self, message: Dict, client_id: str):
@@ -70,3 +75,15 @@ class ConnectionManager:
                 "timestamp": datetime.now().isoformat(),
                 "connected_clients": len(self.active_connections)
             })
+            
+    def get_connection_stats(self):
+        return {
+            "total_clients": len(self.active_connections),
+        }
+        
+    
+
+# Create a single instance to be imported by other modules
+connection_manager = ConnectionManager()
+        
+    

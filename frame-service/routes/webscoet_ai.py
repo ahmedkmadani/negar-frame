@@ -1,7 +1,7 @@
 from fastapi import WebSocket, WebSocketDisconnect
 from fastapi.routing import APIRouter
 from datetime import datetime
-from utils.websocket_utils import ConnectionManager
+from utils.websocket_utils import connection_manager
 from utils.logger import get_logger
 # Import our enhanced utility modules
 from utils.frame_utils import (
@@ -11,7 +11,6 @@ from utils.frame_utils import (
 logger = get_logger("frame-service")
 
 # Initialize connection manager
-manager = ConnectionManager()
 
 # Add description for the WebSocket endpoints
 websocket_route = APIRouter(
@@ -41,22 +40,22 @@ async def websocket_endpoint(websocket: WebSocket):
         "timestamp": "ISO-8601 timestamp"
     }
     """
-    client_id = await manager.connect(websocket)
+    client_id = await connection_manager.connect(websocket)
     try:
         while True:
             try:
                 # Keep the connection alive and handle client messages
                 data = await websocket.receive_json()
                 # Handle any client messages here
-                await manager.send_personal_message({
+                await connection_manager.send_personal_message({
                     "type": "ack",
                     "received": data,
                     "timestamp": datetime.now().isoformat()
                 }, client_id)
             except WebSocketDisconnect:
-                manager.disconnect(client_id)
+                connection_manager.disconnect(client_id)
                 break
             except Exception as e:
                 logger.error(f"Error handling message from client {client_id}: {e}")
     finally:
-        manager.disconnect(client_id)
+        connection_manager.disconnect(client_id)
