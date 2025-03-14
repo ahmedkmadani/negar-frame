@@ -635,7 +635,7 @@
         }
 
         function connectWebSocket() {
-            const ws = new WebSocket('http://localhost:5004/ws/ai_results');
+            const ws = new WebSocket('wss://dev-negar-ai.leamech.com/ws/ai_results');
             
             ws.onopen = () => {
                 statusDiv.className = 'alert alert-success';
