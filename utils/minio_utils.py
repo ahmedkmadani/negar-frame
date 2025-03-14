@@ -49,17 +49,6 @@ def ensure_bucket_exists(bucket_name):
     except Exception as e:
         logger.error(f"Error setting up bucket {bucket_name}: {e}")
 
-def get_minio_url(bucket, filename):
-    """Generate a URL for a MinIO object"""
-    try:
-        url = minio_client.presigned_get_object(
-            bucket_name=bucket,
-            object_name=filename,
-            expires=timedelta(hours=1)
-        )
-        return url
-    except Exception as e:
-        return f"https://{MINIO_ENDPOINT}/{bucket}/{filename}" 
     
 def get_object(bucket_name, object_name):
     """Get an object from MinIO"""
@@ -122,14 +111,3 @@ def list_objects(bucket_name, prefix="", recursive=True):
     except Exception as e:
         logger.error(f"Error listing objects in bucket {bucket_name}: {e}")
         return []
-
-def ensure_bucket_exists(bucket_name):
-    """Create bucket if it doesn't exist"""
-    try:
-        if not minio_client.bucket_exists(bucket_name):
-            minio_client.make_bucket(bucket_name)
-            logger.info(f"Created bucket: {bucket_name}")
-        return True
-    except Exception as e:
-        logger.error(f"Error ensuring bucket {bucket_name} exists: {e}")
-        return False 

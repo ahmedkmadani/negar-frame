@@ -7,7 +7,7 @@ import asyncio
 from utils import (
     process_image,
     ensure_bucket_exists,
-    get_minio_url,
+    get_presigned_url,
     minio_client,
     MINIO_BUCKET,
     MINIO_BUCKET_PROCESSED,
@@ -86,8 +86,8 @@ async def main():
                         
                         # Upload processed image to the new bucket
                         processed_filename = f"processed_{filename}"
-                        original_url = get_minio_url(bucket, filename)
-                        processed_url = get_minio_url(MINIO_BUCKET_PROCESSED, processed_filename)
+                        original_url = get_presigned_url(bucket, filename)
+                        processed_url = get_presigned_url(MINIO_BUCKET_PROCESSED, processed_filename)
                         
                         # Ensure processed bucket exists
                         ensure_bucket_exists(MINIO_BUCKET_PROCESSED)
@@ -176,8 +176,8 @@ async def test_process_images():
                 
                 # Upload processed image
                 processed_filename = f"test_processed_{filename}"
-                original_url = get_minio_url(MINIO_BUCKET, filename)
-                processed_url = get_minio_url(MINIO_BUCKET_PROCESSED_TEST, processed_filename)
+                original_url = get_presigned_url(MINIO_BUCKET, filename)
+                processed_url = get_presigned_url(MINIO_BUCKET_PROCESSED_TEST, processed_filename)
                 minio_client.put_object(
                     MINIO_BUCKET_PROCESSED_TEST,
                     processed_filename,
