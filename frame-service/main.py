@@ -105,14 +105,14 @@ async def frame_listener():
                                 
                                 filename = f"frame_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}.png"
                             
-                            # Upload to MinIO
-                            put_object(
-                                MINIO_BUCKET, 
-                                filename,
-                                img_buffer,
-                                img_buffer.getbuffer().nbytes,
-                                content_type="image/jpeg"
-                            )
+                                # Upload to MinIO
+                                put_object(
+                                    MINIO_BUCKET, 
+                                    filename,
+                                    img_buffer,
+                                    img_buffer.getbuffer().nbytes,
+                                    content_type="image/jpeg"
+                                )
                             
                             # Publish to AI channel
                             try:
