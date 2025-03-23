@@ -12,11 +12,11 @@ logger = logging.getLogger(__name__)
 REDIS_HOST = REDIS_CONFIG["host"]
 REDIS_PORT = REDIS_CONFIG["port"]
 REDIS_DB = REDIS_CONFIG["db"]
-REDIS_CHANNEL_INPUT = REDIS_CONFIG["channels"]["input"]
-REDIS_CHANNEL_OUTPUT = REDIS_CONFIG["channels"]["output"]
 REDIS_PASSWORD = REDIS_CONFIG["password"]
+REDIS_CHANNEL_AI_CHANNEL = REDIS_CONFIG["channels"]["ai_channel"]
 REDIS_CHANNEL_SYNC_FRAME = REDIS_CONFIG["channels"]["sync_frame"]
 REDIS_CHANNEL_AI_RESULTS = REDIS_CONFIG["channels"]["ai_results"]
+REDIS_CHANNEL_MAPPING = REDIS_CONFIG["channels"]["mapping"]
 
 async def initialize_redis():
     """Initialize Redis connection with retry and keepalive settings"""

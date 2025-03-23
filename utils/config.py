@@ -20,10 +20,10 @@ REDIS_CONFIG = {
     "db": int(os.getenv('REDIS_DB', 0)),
     "password": os.getenv('REDIS_PASSWORD', ''),
     "channels": {
-        "input": "ai_channel",
-        "output": "ai_results",
+        "ai_channel": "ai_channel",
         "sync_frame": "sync_frame",
-        "ai_results": "ai_results"
+        "ai_results": "ai_results",
+        "mapping": "ai_mapping"
     }
 }
 

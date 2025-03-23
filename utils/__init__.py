@@ -10,8 +10,10 @@ from .minio_utils import (
 )
 from .redis_utils import (
     initialize_redis,
-    REDIS_CHANNEL_INPUT,
-    REDIS_CHANNEL_OUTPUT
+    REDIS_CHANNEL_SYNC_FRAME,
+    REDIS_CHANNEL_MAPPING,
+    REDIS_CHANNEL_AI_CHANNEL,
+    REDIS_CHANNEL_AI_RESULTS
 )
 from .model_utils import initialize_model
 from .result_utils import (
@@ -35,9 +37,10 @@ __all__ = [
     
     # Redis utilities
     'initialize_redis',
-    'REDIS_CHANNEL_INPUT',
-    'REDIS_CHANNEL_OUTPUT',
-    
+    'REDIS_CHANNEL_MAPPING',
+    'REDIS_CHANNEL_AI_CHANNEL',
+    'REDIS_CHANNEL_AI_RESULTS',
+    'REDIS_CHANNEL_SYNC_FRAME',
     # Model utilities
     'initialize_model',
     
