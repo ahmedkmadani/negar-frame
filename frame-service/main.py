@@ -80,7 +80,7 @@ async def frame_listener():
             while True:
                 try:
                     message = await get_message_with_timeout(pubsub, timeout=1.0)
-                    logger.info(f"Received message: {message}")
+                    # logger.info(f"Received message: {message}")
                     
                     if message and message['type'] == 'message':
                         # Process the Aktar frame
