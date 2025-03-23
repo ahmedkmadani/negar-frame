@@ -1,5 +1,5 @@
+import json
 import time
-import logging
 from datetime import datetime
 from utils.logger import get_logger
 import asyncio
@@ -16,11 +16,15 @@ from utils import (
     initialize_model,
     format_result_data,
     format_error_data,
-    publish_result,
-    REDIS_CHANNEL_INPUT,
-    REDIS_CHANNEL_OUTPUT
+    REDIS_CHANNEL_MAPPING,
+    REDIS_CHANNEL_AI_CHANNEL,
+    REDIS_CHANNEL_AI_RESULTS
 )
-
+import numpy as np
+import yaml
+from localizing import PersonLocalizer
+from utils.redis_utils import REDIS_CHANNEL_AI_RESULTS
+from utils.result_utils import NumpyEncoder
 logger = get_logger("ai-service")
 
 # Initialize YOLO model
@@ -32,9 +36,34 @@ ensure_bucket_exists(MINIO_BUCKET_PROCESSED)
 ensure_bucket_exists(MINIO_BUCKET_PROCESSED_TEST)
 
 
+def yolov8pose_post_process(detections, threshold=0.50):
+    result = []
+    for res in detections:
+        bconfs = res.boxes.conf
+        boxes = res.boxes.xyxy.reshape(-1, 4)[bconfs > threshold]
+        boxes = boxes.cpu().numpy().astype("int32")
+        keypoints = res.keypoints.xy.reshape(-1, 17, 2)[bconfs > threshold]
+        keypoints = keypoints.cpu().numpy().astype("int32")
+        
+        # Fix the size check - use len() or check if array is empty
+        if res.keypoints.conf is not None and len(res.keypoints.conf) > 0:
+            confs = res.keypoints.conf[bconfs > threshold]
+            confs = confs.cpu().numpy().reshape(-1, 17)
+        else:
+            confs = np.array([]).reshape(-1, 17)
+            
+        result.append({"boxes": boxes, "keypoints": keypoints, "confs": confs})
+    return result
+
+
 async def main():
     """Main function to process images from Redis queue"""
     logger.info("Starting AI service")
+    
+    with open("config.yaml", 'r') as f:
+        cfg = yaml.safe_load(f)
+
+    person_localizer = PersonLocalizer(cfg.get("localizing", {}))
     
     try:
         # Initialize Redis
@@ -42,8 +71,8 @@ async def main():
         
         # Subscribe to the frames channel
         pubsub = r.pubsub()
-        await pubsub.subscribe(REDIS_CHANNEL_INPUT)
-        logger.info(f"Subscribed to {REDIS_CHANNEL_INPUT} channel")
+        await pubsub.subscribe(REDIS_CHANNEL_AI_CHANNEL)
+        logger.info(f"Subscribed to {REDIS_CHANNEL_AI_CHANNEL} channel")
         
         while True:
             try:
@@ -88,6 +117,11 @@ async def main():
                         processed_filename = f"processed_{filename}"
                         original_url = get_presigned_url(bucket, filename)
                         processed_url = get_presigned_url(MINIO_BUCKET_PROCESSED, processed_filename)
+                        camera_id = ["camera1"]
+                    
+                        detections = yolov8pose_post_process(results)
+                        persons_info = person_localizer(camera_id, detections)
+                        
                         
                         # Ensure processed bucket exists
                         ensure_bucket_exists(MINIO_BUCKET_PROCESSED)
@@ -102,24 +136,15 @@ async def main():
                         logger.info(f"Uploaded processed image to {MINIO_BUCKET_PROCESSED}: {processed_filename}")
                         
                         # Publish results back to Redis
-                        result_data = {
-                            'original_filename': filename,
-                            'original_bucket': bucket,
-                            'processed_filename': processed_filename,
-                            'processed_bucket': MINIO_BUCKET_PROCESSED,
-                            'original_url': original_url,
-                            'processed_url': processed_url,
-                            'status': 'success',
-                            'processing_time': processing_time,
-                            'detections': {
-                                'total_persons': len(people_data),
-                                'people': people_data
-                            },
-                            'timestamp': data.get('timestamp'),
-                            'camera_id': data.get('camera_id')
-                        }
-                        await r.publish(REDIS_CHANNEL_OUTPUT, str(result_data))
-                        logger.info("Published results to ai_results channel")
+                        result_data = format_result_data(
+                            filename, MINIO_BUCKET, processed_filename, MINIO_BUCKET_PROCESSED,
+                            original_url, processed_url, processing_time, people_data, camera_id, persons_info, "ai_result"
+                        )
+                        
+                        await r.publish(REDIS_CHANNEL_AI_RESULTS, json.dumps(result_data))
+                        
+                        await r.publish(REDIS_CHANNEL_MAPPING, json.dumps(result_data))
+                        logger.info(f"Published results to {REDIS_CHANNEL_MAPPING} channel and {REDIS_CHANNEL_AI_RESULTS} channel")
                         
                     except Exception as e:
                         logger.error(f"Error processing image: {e}", exc_info=True)
@@ -132,7 +157,7 @@ async def main():
                             'timestamp': data.get('timestamp'),
                             'camera_id': data.get('camera_id')
                         }
-                        await r.publish(REDIS_CHANNEL_OUTPUT, str(error_data))
+                        await r.publish(REDIS_CHANNEL_AI_RESULTS, str(error_data))
                 
                 await asyncio.sleep(0.1)  # Prevent CPU spinning
                 
@@ -148,9 +173,14 @@ async def test_process_images():
     """Test function to process all images in frames bucket"""
     logger.info("Starting test: Processing all images in frames bucket")
     
+    with open("config.yaml", 'r') as f:
+        cfg = yaml.safe_load(f)
+
+    person_localizer = PersonLocalizer(cfg.get("localizing", {}))
+    
     try:
         # Initialize Redis
-        r = initialize_redis()
+        r = await initialize_redis()
         
         # List all objects in frames bucket
         try:    
@@ -178,6 +208,8 @@ async def test_process_images():
                 processed_filename = f"test_processed_{filename}"
                 original_url = get_presigned_url(MINIO_BUCKET, filename)
                 processed_url = get_presigned_url(MINIO_BUCKET_PROCESSED_TEST, processed_filename)
+                camera_id = ["camera1"]
+                
                 minio_client.put_object(
                     MINIO_BUCKET_PROCESSED_TEST,
                     processed_filename,
@@ -189,16 +221,20 @@ async def test_process_images():
                 logger.info(f"Original image: {original_url}")
                 logger.info(f"Processed image: {processed_url}")
                 
+                detections = yolov8pose_post_process(results)
+                persons_info = person_localizer(camera_id, detections)
                 # Format and publish results
                 result_data = format_result_data(
                     filename, MINIO_BUCKET, processed_filename, MINIO_BUCKET_PROCESSED_TEST,
-                    original_url, processed_url, processing_time, people_data
+                    original_url, processed_url, processing_time, people_data, camera_id, persons_info, "ai_result"
                 )
-                publish_result(r, REDIS_CHANNEL_OUTPUT, result_data)
+                await r.publish(REDIS_CHANNEL_AI_RESULTS, json.dumps(result_data, cls=NumpyEncoder))
+                
+                await r.publish(REDIS_CHANNEL_MAPPING, json.dumps(result_data, cls=NumpyEncoder))
                 logger.info(f"Published results for {filename}")
                 
                 # Add delay between images
-                time.sleep(2)
+                await asyncio.sleep(2)
                 
             except Exception as e:
                 logger.error(f"Error processing {filename}: {e}", exc_info=True)
@@ -210,7 +246,7 @@ async def test_process_images():
                     total_images=total_images,
                     timestamp=datetime.now().isoformat()
                 )
-                publish_result(r, REDIS_CHANNEL_OUTPUT, error_data)
+                await r.publish(REDIS_CHANNEL_AI_RESULTS, str(error_data))
                 continue
         
         logger.info("\nTest completed: All images processed")
@@ -224,4 +260,6 @@ if __name__ == "__main__":
         asyncio.run(test_process_images())
     else:
         asyncio.run(main())
+        # asyncio.run(test_process_images())
+
 

@@ -1,0 +1,13 @@
+localizing:
+  logging:
+    file: localizer.log
+    debug: True
+
+  mapping:
+    0:
+      rtcd_file: data/calibrations/home-mostafa/IR/1/rtcd.yaml
+    1:
+      rtcd_file: data/calibrations/home-mostafa/IR/2/rtcd.yaml
+
+  merging:
+    thresh: 200

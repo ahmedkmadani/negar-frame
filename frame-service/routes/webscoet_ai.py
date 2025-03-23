@@ -59,3 +59,4 @@ async def websocket_endpoint(websocket: WebSocket):
                 logger.error(f"Error handling message from client {client_id}: {e}")
     finally:
         connection_manager.disconnect(client_id)
+        logger.info(f"Client {client_id} disconnected")

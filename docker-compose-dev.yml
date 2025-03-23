@@ -45,6 +45,24 @@ services:
       - app-network
       - dev-network
 
+  mapping-service:
+    container_name: mapping-service
+    build:
+      context: .
+      dockerfile: ./mapping-service/Dockerfile
+    environment:
+      - REDIS_HOST=dev-valkey
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=v@lk3y#2023_C@che!
+    volumes:
+      - ./mapping-service:/app
+      - ./utils:/app/utils
+    ports:
+      - "5005:5005"
+    networks:
+      - app-network
+      - dev-network
+
 networks:
   app-network:
     driver: bridge

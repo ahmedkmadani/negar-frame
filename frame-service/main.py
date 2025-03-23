@@ -6,7 +6,7 @@ from routes.webscoet_ai import websocket_route
 from routes.frame_ai import frame_ai_route
 from utils.logger import get_logger
 from utils.websocket_utils import connection_manager
-from utils.redis_utils import initialize_redis, subscribe_to_channel, publish_message, get_message_with_timeout, REDIS_CHANNEL_SYNC_FRAME, REDIS_CHANNEL_AI_RESULTS
+from utils.redis_utils import initialize_redis, subscribe_to_channel, publish_message, get_message_with_timeout, REDIS_CHANNEL_SYNC_FRAME, REDIS_CHANNEL_AI_RESULTS, REDIS_CHANNEL_AI_CHANNEL
 from utils.minio_utils import put_object, MINIO_BUCKET, ensure_bucket_exists
 from PIL import Image
 import io
@@ -123,10 +123,10 @@ async def frame_listener():
                                     'camera_id': camera_list[0],
                                     'upload_time': datetime.now().isoformat()
                                 }
-                                await publish_message(redis_client, 'ai_channel', str(ai_message))
-                                logger.info(f"Published to AI channel: {filename}")
+                                await publish_message(redis_client, REDIS_CHANNEL_AI_CHANNEL, str(ai_message))
+                                logger.info(f"Published to {REDIS_CHANNEL_AI_CHANNEL} channel: {filename}")
                             except Exception as e:
-                                logger.error(f"Failed to publish to AI channel: {e}")
+                                logger.error(f"Failed to publish to {REDIS_CHANNEL_AI_CHANNEL} channel: {e}")
                 
                     # Small delay to prevent CPU spinning
                     await asyncio.sleep(0.01)
@@ -183,18 +183,15 @@ async def ai_result_listener():
                             # Parse the message data
                             data = eval(message['data'])  # Using eval since the data is a string representation of dict
                             data['received_timestamp'] = datetime.now().isoformat()
-                            
+                            data['type'] = 'ai_result'
+                            data['camera_id'] = data['camera_id']
                             # Add metadata
                             data['metadata'] = {
                                 'channel': REDIS_CHANNEL_AI_RESULTS,
                                 'active_clients': len(connection_manager.active_connections)
                             }
                             
-                            logger.info(f"Broadcasting AI result to {len(connection_manager.active_connections)} clients")
-                            clinet_id = "281470929678928"
-                            logger.info(f"Broadcasting AI result to client {clinet_id}")
-                            await connection_manager.send_personal_message(data, clinet_id)
-                            
+                            logger.info(f"Broadcasting AI result to {len(connection_manager.active_connections)} clients")                            
                             await connection_manager.broadcast(data)
                         except Exception as e:
                             logger.error(f"Error processing message: {e}")
