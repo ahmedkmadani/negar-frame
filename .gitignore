@@ -16,3 +16,5 @@ __pycache__/
 
 frame-websocket/__pycache__/
 ai-service/__pycache__/
+mapping-service/__pycache__/*
+frame-service/__pycache__/main.cpython-39.pyc
