@@ -141,9 +141,9 @@ async def main():
                             original_url, processed_url, processing_time, people_data, camera_id, persons_info, "ai_result"
                         )
                         
-                        await r.publish(REDIS_CHANNEL_AI_RESULTS, json.dumps(result_data))
-                        
-                        await r.publish(REDIS_CHANNEL_MAPPING, json.dumps(result_data))
+                        await r.publish(REDIS_CHANNEL_AI_RESULTS, json.dumps(result_data, cls=NumpyEncoder))
+                
+                        await r.publish(REDIS_CHANNEL_MAPPING, json.dumps(result_data, cls=NumpyEncoder))
                         logger.info(f"Published results to {REDIS_CHANNEL_MAPPING} channel and {REDIS_CHANNEL_AI_RESULTS} channel")
                         
                     except Exception as e:
