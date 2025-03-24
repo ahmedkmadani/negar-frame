@@ -1,4 +1,3 @@
-
 from utils.redis_utils import initialize_redis, REDIS_CHANNEL_MAPPING
 from utils.logger import get_logger
 import asyncio
@@ -15,13 +14,8 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-          "https://dev-negar-ai.leamech.com",  # Add your domain
-        "http://localhost:3000",             # For local development
-        "http://localhost:5004",
-        "https://negar.leamech.com",
-        ],  # Adjust this in production
-    allow_credentials=True,
+    allow_origins=["*"],  # Allow all origins
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
