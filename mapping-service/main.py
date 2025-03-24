@@ -14,7 +14,12 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins
+    allow_origins=[
+        "https://dev-negar-ai.leamech.com",  # Add your domain
+        "http://localhost:3000",             # For local development
+        "http://localhost:5004",
+        "https://negar.leamech.com",
+        ],  # Adjust this in production
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
