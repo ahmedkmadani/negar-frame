@@ -11,7 +11,7 @@ services:
       - MINIO_ACCESS_KEY=minio
       - MINIO_SECURE=true
       - MINIO_SECRET_KEY=mIn!0#2023_S3cureKey
-      - REDIS_HOST=dev-valkey.leamech.com
+      - REDIS_HOST=valkey-service
       - REDIS_PASSWORD=v@lk3y#2023_C@che!
       - REDIS_PORT=6379
     volumes:
@@ -28,7 +28,7 @@ services:
     ports:
       - "5004:5004"
     environment:
-      - REDIS_HOST=dev-valkey.leamech.com
+      - REDIS_HOST=valkey-service
       - REDIS_PORT=6379
       - MINIO_ENDPOINT=dev-minio.leamech.com
       - MINIO_ACCESS_KEY=minio
@@ -47,7 +47,7 @@ services:
       context: .
       dockerfile: ./mapping-service/Dockerfile
     environment:
-      - REDIS_HOST=dev-valkey.leamech.com
+      - REDIS_HOST=valkey-service
       - REDIS_PORT=6379
       - REDIS_PASSWORD=v@lk3y#2023_C@che!
     volumes:
@@ -58,9 +58,24 @@ services:
     networks:
       - app-network
 
+  valkey-service:
+    container_name: valkey-service
+    image: valkey/valkey:latest
+    command: ["valkey-server", "--appendonly", "yes", "--bind", "0.0.0.0", "--protected-mode", "no", "--replicaof", "no", "one"]
+    ports:
+      - "6379:6379"
+    environment:
+      - REDIS_PASSWORD=v@lk3y#2023_C@che!
+    networks:
+      - app-network
+    volumes:
+      - valkey-data:/data
+      
+      
+
 networks:
   app-network:
     driver: bridge
 
 volumes:
-  minio-data: 
+  valkey-data:

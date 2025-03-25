@@ -25,6 +25,10 @@ import yaml
 from localizing import PersonLocalizer
 from utils.redis_utils import REDIS_CHANNEL_AI_RESULTS
 from utils.result_utils import NumpyEncoder
+from test_process_images import test_process_images
+from PIL import Image
+from io import BytesIO
+
 logger = get_logger("ai-service")
 
 # Initialize YOLO model
@@ -113,8 +117,28 @@ async def main():
                         processing_time = time.time() - start_time
                         logger.info(f"YOLOv8 processing completed in {processing_time:.2f} seconds")
                         
+                        # Get original size
+                        processed_image.seek(0)
+                        original_size = processed_image.getbuffer().nbytes / (1024 * 1024)  # Convert to MB
+                        logger.info(f"Original image size: {original_size:.2f} MB")
+                        
+                        
+                        # Compress the processed image using JPEG
+                        img = Image.open(processed_image)
+                        compressed_image = BytesIO()
+                        # Convert to RGB mode as JPEG doesn't support RGBA
+                        if img.mode in ('RGBA', 'LA'):
+                            img = img.convert('RGB')
+                        img.save(compressed_image, format='JPEG', quality=120)
+                        compressed_image.seek(0)
+                        
+                        # Get compressed size
+                        compressed_size = compressed_image.getbuffer().nbytes / (1024 * 1024)  # Convert to MB
+                        logger.info(f"Compressed image size: {compressed_size:.2f} MB (reduced by {((original_size - compressed_size) / original_size * 100):.1f}%)")
+                        
+                        
                         # Upload processed image to the new bucket
-                        processed_filename = f"processed_{filename}"
+                        processed_filename = f"processed_{filename.rsplit('.', 1)[0]}.jpg"
                         original_url = get_presigned_url(bucket, filename)
                         processed_url = get_presigned_url(MINIO_BUCKET_PROCESSED, processed_filename)
                         camera_id = ["camera1"]
@@ -169,97 +193,14 @@ async def main():
         logger.error(f"Redis connection error: {e}", exc_info=True)
         raise
 
-async def test_process_images():
-    """Test function to process all images in frames bucket"""
-    logger.info("Starting test: Processing all images in frames bucket")
-    
-    with open("config.yaml", 'r') as f:
-        cfg = yaml.safe_load(f)
 
-    person_localizer = PersonLocalizer(cfg.get("localizing", {}))
-    
-    try:
-        # Initialize Redis
-        r = await initialize_redis()
-        
-        # List all objects in frames bucket
-        try:    
-            objects = list(minio_client.list_objects(MINIO_BUCKET))
-            total_images = len(objects)
-            logger.info(f"Found {total_images} images to process")
-        except Exception as e:
-            logger.error(f"Error listing objects: {e}", exc_info=True)
-            return
-        
-        for idx, obj in enumerate(objects, 1):
-            try:
-                filename = obj.object_name
-                logger.info(f"\nProcessing image {idx}/{total_images}: {filename}")
-                
-                # Get image data
-                image_data = minio_client.get_object(MINIO_BUCKET, filename).read()
-                
-                # Process image
-                start_time = time.time()
-                processed_image, results, people_data = process_image(image_data, model)
-                processing_time = time.time() - start_time
-                
-                # Upload processed image
-                processed_filename = f"test_processed_{filename}"
-                original_url = get_presigned_url(MINIO_BUCKET, filename)
-                processed_url = get_presigned_url(MINIO_BUCKET_PROCESSED_TEST, processed_filename)
-                camera_id = ["camera1"]
-                
-                minio_client.put_object(
-                    MINIO_BUCKET_PROCESSED_TEST,
-                    processed_filename,
-                    processed_image,
-                    processed_image.getbuffer().nbytes,
-                    content_type='image/png'
-                )
-                
-                logger.info(f"Original image: {original_url}")
-                logger.info(f"Processed image: {processed_url}")
-                
-                detections = yolov8pose_post_process(results)
-                persons_info = person_localizer(camera_id, detections)
-                # Format and publish results
-                result_data = format_result_data(
-                    filename, MINIO_BUCKET, processed_filename, MINIO_BUCKET_PROCESSED_TEST,
-                    original_url, processed_url, processing_time, people_data, camera_id, persons_info, "ai_result"
-                )
-                await r.publish(REDIS_CHANNEL_AI_RESULTS, json.dumps(result_data, cls=NumpyEncoder))
-                
-                await r.publish(REDIS_CHANNEL_MAPPING, json.dumps(result_data, cls=NumpyEncoder))
-                logger.info(f"Published results for {filename}")
-                
-                # Add delay between images
-                await asyncio.sleep(2)
-                
-            except Exception as e:
-                logger.error(f"Error processing {filename}: {e}", exc_info=True)
-                error_data = format_error_data(
-                    filename, 
-                    e,
-                    test_id=f"test_{int(time.time())}",
-                    image_index=idx,
-                    total_images=total_images,
-                    timestamp=datetime.now().isoformat()
-                )
-                await r.publish(REDIS_CHANNEL_AI_RESULTS, str(error_data))
-                continue
-        
-        logger.info("\nTest completed: All images processed")
-        
-    except Exception as e:
-        logger.error(f"Test function error: {e}", exc_info=True)
 
 if __name__ == "__main__":
     import sys
     if len(sys.argv) > 1 and sys.argv[1] == "test":
         asyncio.run(test_process_images())
     else:
-        asyncio.run(main())
-        # asyncio.run(test_process_images())
+        # asyncio.run(main())
+        asyncio.run(test_process_images())
 
 
