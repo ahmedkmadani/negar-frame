@@ -102,10 +102,10 @@ async def ai_mapping_listener():
 
 uuid = " "
 
-@app.get("api/get_user_id/{uuid}")
-async def get_user_id(uuid: str):
-    """Get user id from uuid"""
-    return {"user_id": "123"}
+@app.get("api/get_uuid")
+async def get_uuid():
+    """Get uuid from user id"""
+    return {"uuid": "123"}
 
 @app.webhooks("/ws/mapping/{uuid}")
 async def websocket_endpoint_uuid(websocket: WebSocket, uuid: str):
