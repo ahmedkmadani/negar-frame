@@ -153,9 +153,9 @@ async def main():
                         minio_client.put_object(
                             MINIO_BUCKET_PROCESSED,
                             processed_filename,
-                            processed_image,
-                            processed_image.getbuffer().nbytes,
-                            content_type='image/png'
+                            compressed_image,
+                            compressed_image.getbuffer().nbytes,
+                            content_type='image/jpeg'
                         )
                         logger.info(f"Uploaded processed image to {MINIO_BUCKET_PROCESSED}: {processed_filename}")
                         
