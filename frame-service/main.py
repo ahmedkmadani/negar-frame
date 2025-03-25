@@ -178,7 +178,7 @@ async def ai_result_listener():
                     message = await get_message_with_timeout(pubsub, timeout=1.0)
                     logger.info(f"Subscribed to {REDIS_CHANNEL_AI_RESULTS} channel")
 
-                    logger.info(f"Received message: {message}")
+                    # logger.info(f"Received message: {message}")
                     if message and message['type'] == 'message':
                         try:
                             # Parse the message data
