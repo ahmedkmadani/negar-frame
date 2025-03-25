@@ -100,6 +100,16 @@ async def ai_mapping_listener():
             except Exception as e:
                 logger.error(f"Error during cleanup: {e}")
 
+uuid = " "
+
+@app.get("api/get_user_id/{uuid}")
+async def get_user_id(uuid: str):
+    """Get user id from uuid"""
+    return {"user_id": "123"}
+
+@app.webhooks("/ws/mapping/{uuid}")
+async def websocket_endpoint_uuid(websocket: WebSocket, uuid: str):
+    pass
 
 @app.websocket("/ws/mapping")
 async def websocket_endpoint(websocket: WebSocket):
