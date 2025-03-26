@@ -83,6 +83,7 @@ async def main():
                     
                     bucket = data['bucket']
                     filename = data['filename']
+                    uuid = data['uuid']
                     
                     # Verify bucket exists
                     if not minio_client.bucket_exists(bucket):
@@ -138,7 +139,7 @@ async def main():
                         # Publish results back to Redis
                         result_data = format_result_data(
                             filename, MINIO_BUCKET, processed_filename, MINIO_BUCKET_PROCESSED,
-                            original_url, processed_url, processing_time, people_data, camera_id, persons_info, "ai_result"
+                            original_url, processed_url, processing_time, people_data, camera_id, persons_info, "ai_result", uuid
                         )
                         
                         await r.publish(REDIS_CHANNEL_AI_RESULTS, json.dumps(result_data, cls=NumpyEncoder))
@@ -172,6 +173,8 @@ async def main():
 async def test_process_images():
     """Test function to process all images in frames bucket"""
     logger.info("Starting test: Processing all images in frames bucket")
+    
+    uuid = "550e8400-e29b-41d4-a716-446655440000"
     
     with open("config.yaml", 'r') as f:
         cfg = yaml.safe_load(f)
@@ -226,7 +229,7 @@ async def test_process_images():
                 # Format and publish results
                 result_data = format_result_data(
                     filename, MINIO_BUCKET, processed_filename, MINIO_BUCKET_PROCESSED_TEST,
-                    original_url, processed_url, processing_time, people_data, camera_id, persons_info, "ai_result"
+                    original_url, processed_url, processing_time, people_data, camera_id, persons_info, "ai_result", uuid
                 )
                 await r.publish(REDIS_CHANNEL_AI_RESULTS, json.dumps(result_data, cls=NumpyEncoder))
                 
@@ -259,7 +262,7 @@ if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == "test":
         asyncio.run(test_process_images())
     else:
-        asyncio.run(main())
-        # asyncio.run(test_process_images())
+        # asyncio.run(main())
+        asyncio.run(test_process_images())
 
 

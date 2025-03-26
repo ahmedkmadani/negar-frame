@@ -17,7 +17,7 @@ class NumpyEncoder(json.JSONEncoder):
         return super(NumpyEncoder, self).default(obj)
 
 def format_result_data(filename, bucket, processed_filename, processed_bucket, 
-                      original_url, processed_url, processing_time, people_data, camera_id, persons_info, result_type):
+                      original_url, processed_url, processing_time, people_data, camera_id, persons_info, result_type, uuid):
     """Format the result data for publishing to Redis"""
     
     data = {
@@ -36,7 +36,8 @@ def format_result_data(filename, bucket, processed_filename, processed_bucket,
             "total_persons": len(people_data),
             "people": people_data,
             "results": persons_info
-        }
+        },
+        "uuid": uuid
     }
         
     return data

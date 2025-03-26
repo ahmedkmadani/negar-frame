@@ -12,6 +12,7 @@ from PIL import Image
 import io
 from fastapi import FastAPI
 
+uuid = "550e8400-e29b-41d4-a716-446655440000"
 
 app = FastAPI(
     title="AI Results WebSocket & API Service",
@@ -122,7 +123,8 @@ async def frame_listener():
                                     'filename': filename,
                                     'timestamp': timestamp,
                                     'camera_id': camera_list[0],
-                                    'upload_time': datetime.now().isoformat()
+                                    'upload_time': datetime.now().isoformat(),
+                                    'uuid': uuid
                                 }
                                 await publish_message(redis_client, REDIS_CHANNEL_AI_CHANNEL, str(ai_message))
                                 logger.info(f"Published to {REDIS_CHANNEL_AI_CHANNEL} channel: {filename}")
