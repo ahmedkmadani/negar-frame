@@ -12,7 +12,7 @@ from PIL import Image
 import io
 from fastapi import FastAPI
 
-uuid = "550e8400-e29b-41d4-a716-446655440000"
+uuid = "2d2ae9ad-3b56-4de3-be2c-31560511e7ea"
 
 app = FastAPI(
     title="AI Results WebSocket & API Service",

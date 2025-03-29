@@ -39,8 +39,6 @@ ensure_bucket_exists(MINIO_BUCKET)
 ensure_bucket_exists(MINIO_BUCKET_PROCESSED)
 ensure_bucket_exists(MINIO_BUCKET_PROCESSED_TEST)
 
-uuid = "2d2ae9ad-3b56-4de3-be2c-31560511e7ea"
-
 
 def yolov8pose_post_process(detections, threshold=0.50):
     result = []
