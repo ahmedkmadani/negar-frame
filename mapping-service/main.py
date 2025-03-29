@@ -20,6 +20,7 @@ app.add_middleware(
         "http://localhost:5004",
         "https://negar.leamech.com",
         "https://localhost:5005",
+        "https://dev-negar.leamech.com",
         ],  # Adjust this in production
     allow_credentials=False,
     allow_methods=["*"],
