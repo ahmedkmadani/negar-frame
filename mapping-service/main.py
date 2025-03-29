@@ -126,7 +126,7 @@ async def ai_mapping_listener():
                 logger.error(f"Error during cleanup: {e}")
 
 
-@app.websocket("/ws/mapping")
+@app.websocket("/ws/dt/")
 async def websocket_endpoint(websocket: WebSocket):
     """WebSocket endpoint for mapping service with required UUID"""
     uuid = None

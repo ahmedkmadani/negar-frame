@@ -35,6 +35,8 @@ ensure_bucket_exists(MINIO_BUCKET)
 ensure_bucket_exists(MINIO_BUCKET_PROCESSED)
 ensure_bucket_exists(MINIO_BUCKET_PROCESSED_TEST)
 
+uuid = "2d2ae9ad-3b56-4de3-be2c-31560511e7ea"
+
 
 def yolov8pose_post_process(detections, threshold=0.50):
     result = []
@@ -174,7 +176,6 @@ async def test_process_images():
     """Test function to process all images in frames bucket"""
     logger.info("Starting test: Processing all images in frames bucket")
     
-    uuid = "550e8400-e29b-41d4-a716-446655440000"
     
     with open("config.yaml", 'r') as f:
         cfg = yaml.safe_load(f)
