@@ -64,6 +64,9 @@ uuid_manager = UUIDConnectionManager()
 async def ai_mapping_listener():
     """Mapping service to map the AI results to the correct camera and UUID"""
     logger.info("Starting AI mapping service")
+    
+    x , z = 0, 0
+    person_id = 0
            
     while True:
         redis_client = None
@@ -87,17 +90,48 @@ async def ai_mapping_listener():
                                 logger.warning(f"Skipping non-AI result message: {data.get('type')}")
                                 continue
                             
-                            # Extract UUID from the data if present
-                            uuid = data["uuid"]
-                            detections = data["detections"]
-                            result = data["detections"]["results"]
+                            try:
+                                # Extract UUID from the data if present
+                                uuid = data["uuid"]
+                                result = data["detections"]["results"]
+                            except Exception as e:
+                                logger.error(f"Error extracting UUID or results: {e}")
+                                continue
                             
+                            for person_id, cameras in result.items():
+                                for camera_id, coordinates in cameras.items():
+                                    x, z = coordinates[0]
+                                    person_id = person_id
+                            
+                        
                             data = {
-                                "uuid": uuid,
-                                "detections": detections,
-                                "result": result
+                                "data": {
+                                    "persons": [    
+                                        {
+                                            "id": person_id,
+                                            "bones": [],
+                                            "joints": [],
+                                            "location": {
+                                                "x": x,
+                                                "z": z
+                                            },
+                                            "isFallen": False,
+                                            "isWalking": False,
+                                            "direction": {
+                                                "x": 0,
+                                                "z": 0
+                                            },
+                                            "height": 180,
+                                            "warning": False,
+                                            "color": "0xffffff"
+                                        }
+                                    ],
+                                    "congestions": [],
+                                    "wet_floors": []
+                                },
+                                "uuid": uuid
                             }
-                            
+                            logger.info(f"Broadcasting mapping data {data} to UUID: {uuid}")
                             if uuid and uuid in uuid_manager.active_connections:
                                 logger.info(f"Broadcasting mapping data to UUID: {uuid}")
                                 await uuid_manager.send_personal_message(data, uuid)

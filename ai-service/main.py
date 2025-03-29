@@ -263,7 +263,7 @@ if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == "test":
         asyncio.run(test_process_images())
     else:
-        # asyncio.run(main())
-        asyncio.run(test_process_images())
+        asyncio.run(main())
+        # asyncio.run(test_process_images())
 
 
