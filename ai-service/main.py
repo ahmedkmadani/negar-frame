@@ -39,6 +39,8 @@ ensure_bucket_exists(MINIO_BUCKET)
 ensure_bucket_exists(MINIO_BUCKET_PROCESSED)
 ensure_bucket_exists(MINIO_BUCKET_PROCESSED_TEST)
 
+uuid = "2d2ae9ad-3b56-4de3-be2c-31560511e7ea"
+
 
 def yolov8pose_post_process(detections, threshold=0.50):
     result = []
@@ -87,6 +89,7 @@ async def main():
                     
                     bucket = data['bucket']
                     filename = data['filename']
+                    uuid = data['uuid']
                     
                     # Verify bucket exists
                     if not minio_client.bucket_exists(bucket):
@@ -162,7 +165,7 @@ async def main():
                         # Publish results back to Redis
                         result_data = format_result_data(
                             filename, MINIO_BUCKET, processed_filename, MINIO_BUCKET_PROCESSED,
-                            original_url, processed_url, processing_time, people_data, camera_id, persons_info, "ai_result"
+                            original_url, processed_url, processing_time, people_data, camera_id, persons_info, "ai_result", uuid
                         )
                         
                         await r.publish(REDIS_CHANNEL_AI_RESULTS, json.dumps(result_data, cls=NumpyEncoder))

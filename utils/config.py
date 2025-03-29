@@ -29,7 +29,7 @@ REDIS_CONFIG = {
 
 # Model configuration
 MODEL_CONFIG = {
-    "path": os.getenv("MODEL_PATH", "yolov8n-pose.pt"),
+    "model_name": os.getenv("MODEL_NAME", "yolov8n-pose"),
     "device": os.getenv("MODEL_DEVICE", "cpu"),
     "confidence_threshold": float(os.getenv("CONFIDENCE_THRESHOLD", "0.5"))
 }

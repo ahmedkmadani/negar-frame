@@ -32,6 +32,8 @@ logger = get_logger("ai-service")
 
 model = initialize_model()
 
+uuid = "2d2ae9ad-3b56-4de3-be2c-31560511e7ea"
+
 
 # Ensure all required buckets exist
 ensure_bucket_exists(MINIO_BUCKET)
@@ -133,7 +135,7 @@ async def test_process_images():
                 # Format and publish results
                 result_data = format_result_data(
                     filename, MINIO_BUCKET, processed_filename, MINIO_BUCKET_PROCESSED_TEST,
-                    original_url, processed_url, processing_time, people_data, camera_id, persons_info, "ai_result"
+                    original_url, processed_url, processing_time, people_data, camera_id, persons_info, "ai_result", uuid
                 )
                 await r.publish(REDIS_CHANNEL_AI_RESULTS, json.dumps(result_data, cls=NumpyEncoder))
                 
