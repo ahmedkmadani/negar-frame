@@ -125,7 +125,7 @@
             recentImagesDiv.innerHTML = '';
             
             try {
-                const response = await fetch('https://frame.leamech.com/images');
+                const response = await fetch('https://dev-negar.leamech.com/api/frame/history');
                 if (!response.ok) {
                     throw new Error(`HTTP error! Status: ${response.status}`);
                 }
@@ -187,7 +187,7 @@
         }
 
         function connectWebSocket() {
-            const ws = new WebSocket('wss://frame.leamech.com/ws/ai_results');
+            const ws = new WebSocket('wss://dev-leamech.com.com/ws/frame');
             
             ws.onopen = () => {
                 statusDiv.className = 'alert alert-success';

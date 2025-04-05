@@ -23,7 +23,7 @@ websocket_route = APIRouter(
     }
 )
 
-@websocket_route.websocket("/ws/frame", name="AI Results WebSocket")
+@websocket_route.websocket("/frame", name="AI Results WebSocket")
 async def websocket_endpoint(websocket: WebSocket):
     """
     WebSocket endpoint for real-time AI results.
