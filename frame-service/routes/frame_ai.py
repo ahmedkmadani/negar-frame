@@ -33,7 +33,7 @@ class ImageInfoResponse(BaseModel):
     images: List[ImageInfo] = Field(default_factory=list)
 
 @frame_ai_route.get(
-    "/frame/history")
+    "/frame/history/")
 async def get_latest_processed_images(
     limit: int = Query(
         default=5,
