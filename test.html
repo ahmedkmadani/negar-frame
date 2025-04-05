@@ -577,38 +577,46 @@
                 const data = await response.json();
                 logDebug('Received recent images:', data);
                 
-                if (data.images && data.images.length > 0) {
+                if (data && data.length > 0) {
                     recentStatusDiv.className = 'alert alert-success';
-                    recentStatusDiv.innerHTML = `<span class="material-icons-round">check_circle</span>Found ${data.images.length} recent images`;
+                    recentStatusDiv.innerHTML = `<span class="material-icons-round">check_circle</span>Found ${data.length} recent frames`;
                     
                     // Display the images
-                    data.images.forEach(image => {
-                        const imageElement = document.createElement('div');
-                        imageElement.className = 'col-md-4';
-                        imageElement.innerHTML = `
-                            <div class="card result-card">
-                                <div class="card-body">
-                                    <h5 class="card-title">${image.filename}</h5>
-                                    <p class="card-text">
-                                        <small class="text-muted">
-                                            <span class="material-icons-round" style="font-size: 16px;">description</span> ${formatFileSize(image.metadata.size)}<br>
-                                            <span class="material-icons-round" style="font-size: 16px;">schedule</span> ${formatDate(image.metadata.last_modified)}
-                                        </small>
-                                    </p>
-                                    <div class="image-container">
-                                        <img src="${image.url}" class="mb-2" alt="${image.filename}">
+                    data.forEach(item => {
+                        // Each item has timestamp and frame array
+                        const timestamp = item.timestamp;
+                        const frames = item.frame;
+                        
+                        // Process each frame in the frame array
+                        frames.forEach(frame => {
+                            const imageElement = document.createElement('div');
+                            imageElement.className = 'col-md-4';
+                            imageElement.innerHTML = `
+                                <div class="card result-card">
+                                    <div class="card-body">
+                                        <h5 class="card-title">Camera ${frame.camera_id}</h5>
+                                        <p class="card-text">
+                                            <small class="text-muted">
+                                                <span class="material-icons-round" style="font-size: 16px;">schedule</span> ${formatDate(timestamp)}
+                                            </small>
+                                        </p>
+                                        <div class="image-container">
+                                            <img src="${frame.url}" class="mb-2" alt="Frame from Camera ${frame.camera_id}">
+                                        </div>
+                                        <a href="${frame.url}" class="btn btn-primary btn-sm" target="_blank">
+                                            <span class="material-icons-round">open_in_new</span> View Full Size
+                                        </a>
                                     </div>
-                                    <a href="${image.url}" class="btn btn-primary btn-sm" target="_blank">
-                                        <span class="material-icons-round">open_in_new</span> View Full Size
-                                    </a>
                                 </div>
-                            </div>
-                        `;
-                        recentImagesDiv.appendChild(imageElement);
+                            `;
+                            recentImagesDiv.appendChild(imageElement);
+                        });
                     });
                     
                     // Update stats
-                    stats.totalImages += data.images.length;
+                    let totalFrames = 0;
+                    data.forEach(item => totalFrames += item.frame.length);
+                    stats.totalImages += totalFrames;
                     updateStatsDisplay();
                 } else {
                     recentStatusDiv.className = 'alert alert-warning';
