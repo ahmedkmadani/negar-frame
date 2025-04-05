@@ -3,6 +3,7 @@ import time
 from datetime import datetime
 import json
 import numpy as np
+from utils.frame_utils import timestamp_from_frame
 
 logger = logging.getLogger(__name__)
 
@@ -30,8 +31,9 @@ def format_result_data(filename, bucket, processed_filename, processed_bucket,
         "processed_url": processed_url,
         "status": "success",
         "processing_time": processing_time,
-        "timestamp": datetime.now().isoformat(),
+        "timestamp": timestamp_from_frame(original_url),
         "camera_id": camera_id,
+        "url": processed_url,
         "detections": {
             "total_persons": len(people_data),
             "people": people_data,

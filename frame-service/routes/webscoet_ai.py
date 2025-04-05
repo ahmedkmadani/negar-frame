@@ -23,12 +23,12 @@ websocket_route = APIRouter(
     }
 )
 
-@websocket_route.websocket("/ai_results", name="AI Results WebSocket")
+@websocket_route.websocket("/ws/frame", name="AI Results WebSocket")
 async def websocket_endpoint(websocket: WebSocket):
     """
     WebSocket endpoint for real-time AI results.
     
-    Connect to this WebSocket at: ws://{host}/ws/ai_results
+    Connect to this WebSocket at: ws://{host}/ws/frame
     
     Messages:
     - Incoming ping: {"type": "ping"}

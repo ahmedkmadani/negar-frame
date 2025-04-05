@@ -8,6 +8,32 @@ from .error_utils import async_error_handler
 
 logger = logging.getLogger(__name__)
 
+
+def timestamp_from_frame(url):
+    try:
+        # Extract the filename part before any query parameters
+        filename = url.split('?')[0].split('/')[-1]
+        
+        # Extract the timestamp part from the filename
+        # Format: processed_frame_YYYYMMDD_HHMMSS_MSMSMS.jpg
+        if 'processed_frame_' in filename:
+            timestamp_part = filename.split('processed_frame_')[1].split('.')[0]
+            
+            # Handle the format with milliseconds (YYYYMMDD_HHMMSS_MSMSMS)
+            # First, get the base timestamp without milliseconds
+            base_timestamp = '_'.join(timestamp_part.split('_')[:2])  # Get YYYYMMDD_HHMMSS part
+            
+            # Parse the base timestamp
+            dt = datetime.strptime(base_timestamp, "%Y%m%d_%H%M%S")
+            return dt.strftime("%Y-%m-%d %H:%M:%S")
+        else:
+            # Fallback to original method if format is different
+            return filename.split('.')[0]
+    except Exception as e:
+        logger.error(f"Error getting timestamp from URL: {e}")
+        return None
+    
+
 def encode_frame_to_base64(frame_data):
     """Encode frame data to base64"""
     try:

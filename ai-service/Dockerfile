@@ -28,9 +28,6 @@ COPY utils/ /app/
 # Add the current directory to PYTHONPATH to find the utils module
 ENV PYTHONPATH="${PYTHONPATH}:/app"
 
-# Download YOLOv8n model
-RUN python -c "from ultralytics import YOLO; YOLO('yolov8n-pose.pt')"
-
 # Set environment variables to ensure PyTorch uses CPU
 ENV CUDA_VISIBLE_DEVICES=""
 ENV FORCE_CPU=1

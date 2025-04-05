@@ -29,9 +29,9 @@ REDIS_CONFIG = {
 
 # Model configuration
 MODEL_CONFIG = {
-    "model_name": os.getenv("MODEL_NAME", "yolov8n-pose"),
+    "model_name": os.getenv("MODEL_NAME", "yolov8l-pose"),
     "device": os.getenv("MODEL_DEVICE", "cpu"),
-    "confidence_threshold": float(os.getenv("CONFIDENCE_THRESHOLD", "0.5"))
+    "confidence_threshold": float(os.getenv("CONFIDENCE_THRESHOLD", "0.05"))
 }
 
 # WebSocket configuration

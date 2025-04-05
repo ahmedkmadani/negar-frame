@@ -5,6 +5,7 @@ from datetime import datetime
 from utils.minio_utils import list_objects, get_presigned_url
 from utils.logger import get_logger
 from utils.config import MINIO_CONFIG
+from utils.frame_utils import timestamp_from_frame
 
 MINIO_BUCKET = MINIO_CONFIG["buckets"]["frames"]
 MINIO_BUCKET_PROCESSED = MINIO_CONFIG["buckets"]["processed"]
@@ -32,8 +33,7 @@ class ImageInfoResponse(BaseModel):
     images: List[ImageInfo] = Field(default_factory=list)
 
 @frame_ai_route.get(
-    "/latest-processed-images",
-    response_model=ImageInfoResponse)
+    "/frame/history")
 async def get_latest_processed_images(
     limit: int = Query(
         default=5,
@@ -63,42 +63,33 @@ async def get_latest_processed_images(
         )[:limit]
         
         # Generate presigned URLs for each object
-        results = []
+        frames = []
         for obj in sorted_objects:
             # Generate a presigned URL
             url = get_presigned_url(processed_bucket, obj.object_name)
             
             # Extract timestamp from filename
             filename = obj.object_name
-            try:
-                # Parse the timestamp from filename (frame_YYYYMMDD_HHMMSS_microseconds.png)
-                parts = filename.split('_')
-                if len(parts) >= 3:
-                    date_str = parts[1]
-                    time_str = parts[2]
-                    timestamp = f"{date_str[:4]}-{date_str[4:6]}-{date_str[6:]}T{time_str[:2]}:{time_str[2:4]}:{time_str[4:6]}"
-                else:
-                    timestamp = obj.last_modified.isoformat()
-            except:
-                timestamp = obj.last_modified.isoformat()
-            
-            metadata = {
+            timestamp = timestamp_from_frame(url)
+
+            frame = {
                 'timestamp': timestamp,
-                'size': obj.size,
-                'last_modified': obj.last_modified.isoformat()
+                'frame': [
+                    {
+                        'camera_id': 0,
+                        'url': url,
+                    }
+                ]
             }
             
-            results.append({
-                'filename': filename,
-                'url': url,
-                'metadata': metadata
-            })
+            frames.append(frame)
+
+        return frames
+          
         
-        return {
-            'status': 'success',
-            'count': len(results),
-            'images': results
-        }
+            
+
+  
         
     except Exception as e:
         logger.error(f"Error getting latest processed images: {e}")

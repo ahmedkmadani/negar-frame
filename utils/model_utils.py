@@ -13,6 +13,11 @@ AVAILABLE_MODELS = {
     "yolov8l-pose": "hub:ultralytics/yolov8l-pose",  # Large
     "yolov8x-pose": "hub:ultralytics/yolov8x-pose",  # Extra Large, most accurate
     
+    # YOLOv11 Pose Models - now available locally
+    "yolov11n-pose": "hub:ultralytics/yolo11n.pt",  # Use the model downloaded in Dockerfile
+    "yolov11s-pose": "hub:ultralytics/yolo11s.pt",  # Will need to add this to Dockerfile if used
+
+    
     # YOLOv7 Pose Models (Good balance of speed/accuracy)
     "yolov7-pose": "hub:WongKinYiu/yolov7-pose",        # Base model
     "yolov7-w6-pose": "hub:WongKinYiu/yolov7-w6-pose",  # Wider version, more accurate
@@ -55,16 +60,21 @@ def initialize_model(model_path=None, device=None):
         model_path = model_path or MODEL_CONFIG["model_name"]
         device = device or MODEL_CONFIG["device"]
         
+        
         # If it's a predefined model, get its path
         if model_path in AVAILABLE_MODELS:
             model_path = AVAILABLE_MODELS[model_path]
         # If it's a direct HuggingFace path (contains '/'), add hub: prefix
         elif '/' in model_path:
             model_path = f"hub:{model_path}"
-            
+        
         logger.info(f"Loading model from: {model_path}")
         model = YOLO(model_path).to(device)
-        logger.info("Model loaded successfully")
+        
+        model.conf = MODEL_CONFIG["confidence_threshold"]
+        model.imgsz = 640
+        
+        logger.info(f"Model loaded successfully")
         return model
     except Exception as e:
         logger.error(f"Error loading model: {e}", exc_info=True)

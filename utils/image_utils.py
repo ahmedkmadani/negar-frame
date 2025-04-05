@@ -9,6 +9,8 @@ logger = logging.getLogger(__name__)
 def process_image(image_data, model):
     """
     Process an image with the YOLO model to detect people and their keypoints.
+    Uses multi-attempt detection with different preprocessing and confidence levels
+    when initial detection fails.
     
     Args:
         image_data: Binary image data
@@ -23,10 +25,57 @@ def process_image(image_data, model):
             
     # Decode image
     nparr = np.frombuffer(image_data, np.uint8)
-    img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+    img = cv2.imdecode(nparr, cv2.COLOR_BGR2RGB)
+    
+    # Get original image dimensions
+    original_height, original_width = img.shape[:2]
+    
+    image_size = (original_height, original_width)
+    logger.info(f"Processing image with original dimensions: {original_width}x{original_height}")
+    
+    # Multi-attempt detection with progressively more aggressive settings
+    logger.info("Attempt 1: Using original image with standard settings...")
+    # First try with standard settings
+    results = model(img, imgsz=image_size, conf=0.4, iou=0.5, verbose=False)
+    
+    # If no detections or very few, try with enhanced image and lower confidence
+    # if len(results) == 0 or not hasattr(results[0], 'boxes') or len(results[0].boxes) == 0:
+    #     logger.info("No detections in attempt 1, trying attempt 2 with enhanced image...")
+        
+    #     # Apply CLAHE (Contrast Limited Adaptive Histogram Equalization) to enhance image
+    #     lab = cv2.cvtColor(img, cv2.COLOR_RGB2LAB)
+    #     l, a, b = cv2.split(lab)
+    #     clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
+    #     cl = clahe.apply(l)
+    #     enhanced_lab = cv2.merge((cl, a, b))
+    #     img_enhanced = cv2.cvtColor(enhanced_lab, cv2.COLOR_LAB2RGB)
+        
+    #     # Try with enhanced image, higher resolution, and lower confidence
+    #     results = model(img_enhanced, imgsz=1280, conf=0.05, iou=0.4, verbose=False)
+        
+    #     # If still no detections, try with original image and even lower confidence
+    #     if len(results) == 0 or not hasattr(results[0], 'boxes') or len(results[0].boxes) == 0:
+    #         logger.info("No detections in attempt 2, trying attempt 3 with contrast enhancement...")
             
-    # Run detection
-    results = model(img)
+    #         # Apply contrast enhancement
+    #         alpha = 1.5  # Contrast control (1.0 means no change)
+    #         beta = 15    # Brightness control (0 means no change)
+    #         img_contrast = cv2.convertScaleAbs(img, alpha=alpha, beta=beta)
+            
+    #         results = model(img_contrast, imgsz=1920, conf=0.03, iou=0.3, verbose=False)
+            
+    #         # If still no detections, try final attempt with extremely low confidence
+    #         if len(results) == 0 or not hasattr(results[0], 'boxes') or len(results[0].boxes) == 0:
+    #             logger.info("No detections in attempt 3, trying final attempt with extremely low confidence...")
+    #             results = model(img, imgsz=1920, conf=0.01, iou=0.2, verbose=False)
+    
+    # Log detection results
+    detected_persons = False
+    if len(results) > 0 and hasattr(results[0], 'boxes') and len(results[0].boxes) > 0:
+        logger.info(f"Successfully detected {len(results[0].boxes)} objects")
+        detected_persons = True
+    else:
+        logger.info("No people detected after all attempts")
             
     # Convert to PIL image for drawing
     img_pil = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
@@ -42,13 +91,19 @@ def process_image(image_data, model):
         "lower_body": (0, 0, 255)  # Blue for lower body
     }
     
-    # Check if results contain detections
-    if len(results) > 0 and hasattr(results[0], 'boxes') and len(results[0].boxes) > 0:
-        # Filter persons with confidence > 0.5
+    # Only process detections if we have valid results
+    persons = []
+    if detected_persons:
+        # Filter persons with confidence > model.conf
         persons = [(i, box) for i, box in enumerate(results[0].boxes.data) 
-                    if int(box[5]) == 0 and box[4] > 0.5]
+                    if int(box[5]) == 0 and box[4] > model.conf]
         
-        logger.info(f"Found {len(persons)} person(s) with confidence > 0.5\n")
+        logger.info(f"Found {len(persons)} person(s) with confidence > {model.conf}\n")
+        
+        # If no persons were found after filtering, update detected_persons flag
+        if len(persons) == 0:
+            detected_persons = False
+            logger.info("No people detected with sufficient confidence")
         
         for person_idx, result in persons:
             x1, y1, x2, y2, conf, class_id = result
@@ -164,38 +219,58 @@ def process_image(image_data, model):
                 }
                 people_data[person_idx]["confidence"] = float(conf)
     
-    # Add a legend
-    legend_x = 20
-    legend_y = 20
-    legend_spacing = 25
-    
-    # Semi-transparent background for legend
-    draw.rectangle(
-        [legend_x - 10, legend_y - 10, legend_x + 150, legend_y + (len(color_map) * legend_spacing) + 10],
-        fill=(255, 255, 255, 180)
-    )
-    
-    # Add legend title
-    draw.text((legend_x, legend_y), "Joint Groups:", fill=(0, 0, 0))
-    legend_y += 25
-    
-    # Add color codes
-    for i, (group, color) in enumerate(color_map.items()):
-        y_pos = legend_y + (i * legend_spacing)
+    # Only add legend if people were detected
+    if detected_persons and len(persons) > 0:
+        # Add a legend
+        legend_x = 20
+        legend_y = 20
+        legend_spacing = 25
         
-        # Draw color box
+        # Semi-transparent background for legend
         draw.rectangle(
-            [legend_x + 10, y_pos, legend_x + 20, y_pos + 10], 
-            fill=color, 
-            outline=(0, 0, 0)
+            [legend_x - 10, legend_y - 10, legend_x + 150, legend_y + (len(color_map) * legend_spacing) + 10],
+            fill=(255, 255, 255, 180)
         )
         
-        # Draw label
-        draw.text(
-            (legend_x + 30, y_pos - 2), 
-            group.replace("_", " ").title(), 
-            fill=(0, 0, 0)
+        # Add legend title
+        draw.text((legend_x, legend_y), "Joint Groups:", fill=(0, 0, 0))
+        legend_y += 25
+        
+        # Add color codes
+        for i, (group, color) in enumerate(color_map.items()):
+            y_pos = legend_y + (i * legend_spacing)
+            
+            # Draw color box
+            draw.rectangle(
+                [legend_x + 10, y_pos, legend_x + 20, y_pos + 10], 
+                fill=color, 
+                outline=(0, 0, 0)
+            )
+            
+            # Draw label
+            draw.text(
+                (legend_x + 30, y_pos - 2), 
+                group.replace("_", " ").title(), 
+                fill=(0, 0, 0)
+            )
+    else:
+        # Add a message when no people are detected
+        message = "No people detected"
+        # Calculate text position to center it in the image
+        text_width = len(message) * 10  # Approximate width of text
+        text_x = (original_width - text_width) // 2
+        text_y = original_height // 2
+        
+        # Add semi-transparent background for text
+        text_padding = 10
+        draw.rectangle(
+            [text_x - text_padding, text_y - text_padding, 
+             text_x + text_width + text_padding, text_y + 20 + text_padding],
+            fill=(255, 255, 255, 180)
         )
+        
+        # Draw the message
+        draw.text((text_x, text_y), message, fill=(255, 0, 0))
     
     # Save the processed image to a byte array
     img_byte_arr = io.BytesIO()

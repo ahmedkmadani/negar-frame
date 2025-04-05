@@ -94,21 +94,17 @@ async def ai_mapping_listener():
                             try:
                                 # Extract UUID from the data if present
                                 uuid = data["uuid"]
+                                detections = data["detections"]
                                 result = data["detections"]["results"]
-                            except Exception as e:
-                                logger.error(f"Error extracting UUID or results: {e}")
-                                continue
-                            
-                            for person_id, cameras in result.items():
-                                for camera_id, coordinates in cameras.items():
-                                    x, z = coordinates[0]
-                                    person_id = person_id
-                            
-                        
-                            data = {
-                                "data": {
-                                    "persons": [    
-                                        {
+                                
+                                # Extract location data and prepare persons array
+                                persons_array = []
+                                for person_id, cameras in result.items():
+                                    for camera_id, coordinates in cameras.items():
+                                        # Get the coordinates
+                                        x, z = coordinates[0]
+                                        
+                                        person = {
                                             "id": person_id,
                                             "bones": [],
                                             "joints": [],
@@ -126,17 +122,31 @@ async def ai_mapping_listener():
                                             "warning": False,
                                             "color": "0xffffff"
                                         }
-                                    ],
-                                    "congestions": [],
-                                    "wet_floors": []
-                                },
-                                "uuid": uuid
-                            }
-                            logger.info(f"Broadcasting mapping data {data} to UUID: {uuid}")
-                            if uuid and uuid in uuid_manager.active_connections:
-                                logger.info(f"Broadcasting mapping data to UUID: {uuid}")
-                                await uuid_manager.send_personal_message(data, uuid)
+                                        persons_array.append(person)
+                                        break  # Only use first camera for now
+                                
+                                logger.info(f"Created persons array with {len(persons_array)} entries")
+                            except Exception as e:
+                                logger.error(f"Error creating persons array: {e}")
+                                persons_array = []
                             
+                            # Only proceed if persons were detected
+                            if persons_array:
+                                data = {
+                                    "data": {
+                                        "persons": persons_array,
+                                        "congestions": [],
+                                        "wet_floors": []
+                                    },
+                                    "uuid": uuid
+                                }
+                                
+                                logger.info(f"Broadcasting mapping data to UUID: {uuid}")
+                                if uuid and uuid in uuid_manager.active_connections:
+                                    logger.info(f"Broadcasting mapping data with {len(persons_array)} persons to UUID: {uuid}")
+                                    await uuid_manager.send_personal_message(data, uuid)
+                            else:
+                                logger.info(f"No persons detected, skipping broadcast for UUID: {uuid}")
                         except json.JSONDecodeError as e:
                             logger.error(f"Invalid JSON in message: {e}")
                         except Exception as e:
