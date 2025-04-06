@@ -74,7 +74,7 @@ async def get_latest_processed_images(
 
             frame = {
                 'timestamp': timestamp,
-                'frame': [
+                'frames': [
                     {
                         'camera_id': 0,
                         'url': url,
@@ -84,7 +84,9 @@ async def get_latest_processed_images(
             
             frames.append(frame)
 
-        return frames
+        return {
+            'frame_history': frames
+        }
           
         
             
