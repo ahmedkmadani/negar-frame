@@ -182,7 +182,7 @@ async def ai_result_listener():
                             data = eval(message['data'])  # Using eval since the data is a string representation of dict
                             data['received_timestamp'] = datetime.now().isoformat()
                             data['type'] = 'ai_result'
-                            data['camera_id'] = data['camera_id']
+                            data['camera_id'] = 0
                             # Add metadata
                             data['metadata'] = {
                                 'channel': REDIS_CHANNEL_AI_RESULTS,
