@@ -569,7 +569,7 @@
             recentImagesDiv.innerHTML = '';
             
             try {
-                const response = await fetch('https://dev-negar.leamech.com/api/frame/history');
+                const response = await fetch('https://dev-negar.leamech.com/api/frame/history/');
                 if (!response.ok) {
                     throw new Error(`HTTP error! Status: ${response.status}`);
                 }
@@ -577,17 +577,17 @@
                 const data = await response.json();
                 logDebug('Received recent images:', data);
                 
-                if (data && data.length > 0) {
+                if (data && data.frame_history && data.frame_history.length > 0) {
                     recentStatusDiv.className = 'alert alert-success';
-                    recentStatusDiv.innerHTML = `<span class="material-icons-round">check_circle</span>Found ${data.length} recent frames`;
+                    recentStatusDiv.innerHTML = `<span class="material-icons-round">check_circle</span>Found ${data.frame_history.length} recent frames`;
                     
                     // Display the images
-                    data.forEach(item => {
-                        // Each item has timestamp and frame array
+                    data.frame_history.forEach(item => {
+                        // Each item has timestamp and frames array
                         const timestamp = item.timestamp;
-                        const frames = item.frame;
+                        const frames = item.frames;
                         
-                        // Process each frame in the frame array
+                        // Process each frame in the frames array
                         frames.forEach(frame => {
                             const imageElement = document.createElement('div');
                             imageElement.className = 'col-md-4';
@@ -615,7 +615,7 @@
                     
                     // Update stats
                     let totalFrames = 0;
-                    data.forEach(item => totalFrames += item.frame.length);
+                    data.frame_history.forEach(item => totalFrames += item.frames.length);
                     stats.totalImages += totalFrames;
                     updateStatsDisplay();
                 } else {
@@ -643,7 +643,7 @@
         }
 
         function connectWebSocket() {
-            const ws = new WebSocket('wss://dev-negar.leamech.com/ws/frame');
+            const ws = new WebSocket('wss://dev-negar.leamech.com/ws/frame/');
             
             ws.onopen = () => {
                 statusDiv.className = 'alert alert-success';
