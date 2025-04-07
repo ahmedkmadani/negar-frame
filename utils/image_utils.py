@@ -36,7 +36,7 @@ def process_image(image_data, model):
     # Multi-attempt detection with progressively more aggressive settings
     logger.info("Attempt 1: Using original image with standard settings...")
     # First try with standard settings
-    results = model(img, imgsz=image_size, conf=0.4, iou=0.5, verbose=False)
+    results = model(img, imgsz=image_size, conf=0.6, iou=0.5, verbose=False)
     
     # If no detections or very few, try with enhanced image and lower confidence
     # if len(results) == 0 or not hasattr(results[0], 'boxes') or len(results[0].boxes) == 0:
