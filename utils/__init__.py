@@ -13,15 +13,21 @@ from .redis_utils import (
     REDIS_CHANNEL_SYNC_FRAME,
     REDIS_CHANNEL_MAPPING,
     REDIS_CHANNEL_AI_CHANNEL,
-    REDIS_CHANNEL_AI_RESULTS
+    REDIS_CHANNEL_AI_RESULTS,
+    REDIS_CHANNEL_HEATMAP
 )
+from .mongodb_utils import (
+    MONGO_HEATMAP_HISTORY_COLLECTION,
+    MONGO_HEATMAP_COLLECTION
+)
+
 from .model_utils import initialize_model
 from .result_utils import (
     format_result_data,
     format_error_data,
     publish_result
 )
-from .config import MINIO_CONFIG, REDIS_CONFIG, MODEL_CONFIG
+from .config import MINIO_CONFIG, REDIS_CONFIG, MODEL_CONFIG, WEBSOCKET_CONFIG, MONGO_CONFIG
 
 __all__ = [
     # Image processing
@@ -53,5 +59,6 @@ __all__ = [
     'MINIO_CONFIG',
     'REDIS_CONFIG',
     'MODEL_CONFIG',
-    'WEBSOCKET_CONFIG'
+    'WEBSOCKET_CONFIG',
+    'MONGO_CONFIG'
 ]

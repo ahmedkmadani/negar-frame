@@ -23,7 +23,8 @@ REDIS_CONFIG = {
         "ai_channel": "ai_channel",
         "sync_frame": "sync_frame",
         "ai_results": "ai_results",
-        "mapping": "ai_mapping"
+        "mapping": "ai_mapping",
+        "heatmap": "foot_traffic_channel"
     }
 }
 
@@ -32,6 +33,19 @@ MODEL_CONFIG = {
     "model_name": os.getenv("MODEL_NAME", "yolov8l-pose"),
     "device": os.getenv("MODEL_DEVICE", "cpu"),
     "confidence_threshold": float(os.getenv("CONFIDENCE_THRESHOLD", "0.05"))
+}
+
+# MongoDB configuration
+MONGO_CONFIG = {
+    "db": os.getenv("MONGO_DB", ""),
+    "username": os.getenv("MONGO_USERNAME", ""),
+    "password": os.getenv("MONGO_PASSWORD", ""),
+    "host": os.getenv("MONGO_HOST", "localhost"),
+    "port": int(os.getenv("MONGO_PORT", 27017)),
+    "collections": {
+        "heatmap": "Heatmap",
+        "heatmap_history": "HeatmapHistory"
+    }
 }
 
 # WebSocket configuration

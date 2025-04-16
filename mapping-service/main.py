@@ -1,4 +1,5 @@
-from utils.redis_utils import initialize_redis, REDIS_CHANNEL_MAPPING
+from math import floor
+from utils.redis_utils import initialize_redis, REDIS_CHANNEL_MAPPING, REDIS_CHANNEL_HEATMAP
 from utils.logger import get_logger
 import asyncio
 from fastapi import FastAPI
@@ -7,7 +8,8 @@ from datetime import datetime
 from fastapi import WebSocket, WebSocketDisconnect
 import json
 from fastapi.middleware.cors import CORSMiddleware
-
+from utils.mongodb_utils import MONGO_HEATMAP_COLLECTION, MONGO_HEATMAP_HISTORY_COLLECTION, mongo_client
+from utils.config import MONGO_CONFIG
 
 
 app = FastAPI()
@@ -27,6 +29,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 logger = get_logger("mapping-service")
+
+username = "lahroodi"
+
+db_name = MONGO_CONFIG["db"]
 
 class UUIDConnectionManager:
     def __init__(self):
@@ -99,6 +105,7 @@ async def ai_mapping_listener():
                                 
                                 # Extract location data and prepare persons array
                                 persons_array = []
+                                points_array = []
                                 for person_id, cameras in result.items():
                                     for camera_id, coordinates in cameras.items():
                                         # Get the coordinates
@@ -122,6 +129,10 @@ async def ai_mapping_listener():
                                             "warning": False,
                                             "color": "0xffffff"
                                         }
+                                        space_width = 100
+                                        space_length = 100
+                                        
+                                        points_array.append({'point': {'x': floor(x/space_width), 'z':floor(z/space_length)}, "value": 5})
                                         persons_array.append(person)
                                         break  # Only use first camera for now
                                 
@@ -129,7 +140,8 @@ async def ai_mapping_listener():
                             except Exception as e:
                                 logger.error(f"Error creating persons array: {e}")
                                 persons_array = []
-                            
+                                points_array = []
+                                
                             # Only proceed if persons were detected
                             if persons_array:
                                 data = {
@@ -145,6 +157,60 @@ async def ai_mapping_listener():
                                 if uuid and uuid in uuid_manager.active_connections:
                                     logger.info(f"Broadcasting mapping data with {len(persons_array)} persons to UUID: {uuid}")
                                     await uuid_manager.send_personal_message(data, uuid)
+                                    
+                                    # Send heatmap data to redis channel
+                                    #TODO: change the time to the timestamp of the frame
+                                    logger.info(f"Sending heatmap data to {REDIS_CHANNEL_HEATMAP} channel")
+                                    try:
+                                        # Add debug log before preparing heatmap data
+                                        logger.info("Preparing heatmap data")
+                                        text_data_json = {"heatmap": 
+                                            {'points':
+                                                points_array, 
+                                            "time":datetime.now().isoformat(), 
+                                            'person_current_count':len(persons_array)}}
+                                        
+                                        # Add debug log for heatmap data content
+                                        logger.info(f"Prepared heatmap data: {text_data_json}")
+                                        
+                                        heatmap_data = {'ft':text_data_json["heatmap"], 'username': username}
+                                        logger.info(f"Publishing to {REDIS_CHANNEL_HEATMAP}: {heatmap_data}")
+                                        await redis_client.publish(REDIS_CHANNEL_HEATMAP, json.dumps(heatmap_data))
+                                        logger.info(f"Successfully published heatmap data to {REDIS_CHANNEL_HEATMAP}")
+                                    except Exception as e:
+                                        logger.error(f"Error in heatmap processing/publishing: {e}", exc_info=True)
+                                    
+                                    try:
+                                        collection = username + MONGO_HEATMAP_COLLECTION
+                                        # Using db_name variable to access the database
+                                        db = mongo_client[db_name]
+                                        db[collection].insert_one(text_data_json)
+                                        logger.info(f"Written heatmap data to {collection} collection in database {db_name}")
+                                    except Exception as e:
+                                        logger.error(f"Error in writing heatmap data to MongoDB: {e}", exc_info=True)
+                                    
+                                    try:
+                                        collection_heatmap_history = username + MONGO_HEATMAP_HISTORY_COLLECTION
+                                        # Check if point exists and add new coordinates to existing ones, or create new point
+                                        for item in points_array:
+                                            x_point = item["point"]["x"]
+                                            z_point = item["point"]["z"]
+                                            value = item["value"]
+                                            
+                                            db = mongo_client[db_name]
+                                            # First try to find if the point exists
+                                            existing_point = db[collection_heatmap_history].find_one({"x": x_point, "z": z_point})
+                                        
+                                            if existing_point:
+                                            # If point exists, add new x and z to existing values
+                                                db[collection_heatmap_history].update_one({"x": x_point, "z": z_point, "value": existing_point["value"] + 5})
+                                            else:
+                                                # If point doesn't exist, create new document
+                                                db[collection_heatmap_history].insert_one({"x": x_point, "z": z_point, "value": value})
+                                                logger.info(f"Updated heatmap history data in {collection_heatmap_history} collection")
+                                    except Exception as e:
+                                        logger.error(f"Error in updating heatmap history data in MongoDB: {e}", exc_info=True)
+                                    
                             else:
                                 logger.info(f"No persons detected, skipping broadcast for UUID: {uuid}")
                         except json.JSONDecodeError as e:

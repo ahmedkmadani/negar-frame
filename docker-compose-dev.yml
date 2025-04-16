@@ -10,10 +10,15 @@ services:
       - MINIO_ENDPOINT=dev-minio.leamech.com
       - MINIO_ACCESS_KEY=minio
       - MINIO_SECRET_KEY=mIn!0#2023_S3cureKey
-      - REDIS_HOST=dev-valkey
+      - REDIS_HOST=dev-valkey.leamech.com
       - MINIO_SECURE=true
-      - REDIS_PASSWORD=v@lk3y#2023_C@che!
+      # - REDIS_PASSWORD=v@lk3y#2023_C@che!
       - REDIS_PORT=6379
+      - MONGO_DB=negar-db
+      - MONGO_USERNAME=mongo
+      - MONGO_PASSWORD=m0ng0#2023_Dev!
+      - MONGO_HOST=dev-mongodb.leamech.com
+      - MONGO_PORT=27017
     extra_hosts:
       - "host.docker.internal:host-gateway"  # Required for Linux
     volumes:
@@ -31,13 +36,18 @@ services:
     ports:
       - "5004:5004"
     environment:
-      - REDIS_HOST=dev-valkey
+      - REDIS_HOST=dev-valkey.leamech.com
       - REDIS_PORT=6379
       - MINIO_ENDPOINT=dev-minio.leamech.com
       - MINIO_ACCESS_KEY=minio
       - MINIO_SECURE=true
       - MINIO_SECRET_KEY=mIn!0#2023_S3cureKey
-      - REDIS_PASSWORD=v@lk3y#2023_C@che!
+      # - REDIS_PASSWORD=v@lk3y#2023_C@che!
+      - MONGO_DB=negar-db
+      - MONGO_USERNAME=mongo
+      - MONGO_PASSWORD=m0ng0#2023_Dev!
+      - MONGO_HOST=dev-mongodb.leamech.com
+      - MONGO_PORT=27017
     volumes:
       - ./frame-service:/app
       - ./utils:/app/utils
@@ -51,9 +61,14 @@ services:
       context: .
       dockerfile: ./mapping-service/Dockerfile
     environment:
-      - REDIS_HOST=dev-valkey
+      - REDIS_HOST=dev-valkey.leamech.com
       - REDIS_PORT=6379
-      - REDIS_PASSWORD=v@lk3y#2023_C@che!
+      # - REDIS_PASSWORD=v@lk3y#2023_C@che!
+      - MONGO_DB=negar-db
+      - MONGO_USERNAME=mongo
+      - MONGO_PASSWORD=m0ng0#2023_Dev!
+      - MONGO_HOST=dev-mongodb.leamech.com
+      - MONGO_PORT=27017
     volumes:
       - ./mapping-service:/app
       - ./utils:/app/utils

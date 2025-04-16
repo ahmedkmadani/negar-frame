@@ -17,6 +17,7 @@ REDIS_CHANNEL_AI_CHANNEL = REDIS_CONFIG["channels"]["ai_channel"]
 REDIS_CHANNEL_SYNC_FRAME = REDIS_CONFIG["channels"]["sync_frame"]
 REDIS_CHANNEL_AI_RESULTS = REDIS_CONFIG["channels"]["ai_results"]
 REDIS_CHANNEL_MAPPING = REDIS_CONFIG["channels"]["mapping"]
+REDIS_CHANNEL_HEATMAP = REDIS_CONFIG["channels"]["heatmap"]
 
 async def initialize_redis():
     """Initialize Redis connection with retry and keepalive settings"""
